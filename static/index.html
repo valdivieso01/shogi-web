@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shōgi Online (将棋) · Ajedrez Japonés para 2 Jugadores</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-koma" aria-hidden="true">王</span>
+      <div>
+        <h1>Shōgi <span lang="ja">将棋</span></h1>
+        <p class="subtitle">Ajedrez Tradicional Japonés · 2 Jugadores en Tiempo Real</p>
+      </div>
+    </div>
+
+    <div class="room-bar" id="room-bar">
+      <div class="room-pill">
+        <span class="status-dot" id="conn-dot" aria-hidden="true"></span>
+        <span class="room-label">Sala:</span>
+        <code id="room-code-display">---</code>
+        <span class="role-badge" id="my-role-badge">Sin sala</span>
+      </div>
+      <button type="button" class="btn btn-accent" id="btn-copy-link" hidden>
+        Copiar link de invitación
+      </button>
+      <button type="button" class="btn" id="btn-open-lobby">
+        Salas / Partida
+      </button>
+      <button type="button" class="btn" id="btn-flip-board">
+        Girar tablero
+      </button>
+      <button type="button" class="btn" id="btn-open-rules">
+        Glosario y Reglas
+      </button>
+    </div>
+  </header>
+
+  <main class="arena">
+    <!-- Columna Izquierda: Reserva Superior (Rival) + Estado -->
+    <aside class="side-panel side-left" aria-label="Panel del jugador superior y reserva">
+      <section class="player-card" id="top-player-card">
+        <div class="player-header">
+          <span class="player-symbol" id="top-player-symbol" aria-hidden="true">☖</span>
+          <div class="player-meta">
+            <h2 id="top-player-title">Gote · Blanco</h2>
+            <p class="player-name" id="top-player-name">Esperando jugador...</p>
+          </div>
+          <span class="turn-tag" id="top-turn-tag" hidden>Su turno</span>
+        </div>
+        <div class="komadai" id="top-komadai" aria-label="Piezas capturadas del jugador superior">
+          <p class="komadai-title">Piezas en mano (Komadai)</p>
+          <div class="komadai-grid" id="top-hand-grid"></div>
+        </div>
+      </section>
+
+      <section class="match-card" aria-labelledby="match-status-heading">
+        <h2 id="match-status-heading">Estado de la Partida</h2>
+        <div class="turn-banner" id="turn-banner" role="status" aria-live="polite">
+          Crea o únete a una sala para comenzar.
+        </div>
+        <div class="check-alert" id="check-alert" role="alert" hidden>
+          ¡Jaque al Rey (<span lang="ja">王手</span> - Ōte)!
+        </div>
+        <div class="invite-callout" id="invite-callout" hidden>
+          <p>Comparte este enlace o código con el 2.º jugador para jugar desde otro dispositivo o pestaña:</p>
+          <div class="invite-row">
+            <input type="text" id="invite-url-input" readonly aria-label="Enlace de invitación a la sala">
+            <button type="button" class="btn btn-accent" id="btn-copy-inline">Copiar</button>
+          </div>
+        </div>
+        <div class="match-actions">
+          <button type="button" class="btn" id="btn-reset-game">Reiniciar tablero</button>
+          <button type="button" class="btn btn-danger" id="btn-resign-game">Rendirse</button>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Centro: Tablero Shōgiban 9x9 -->
+    <section class="board-stage" aria-label="Tablero de Shōgi 9 por 9">
+      <div class="shogiban-frame">
+        <div class="col-coords" id="col-coords" aria-hidden="true"></div>
+        <div class="board-with-rows">
+          <div class=" board-grid" id="shogi-board" role="grid" aria-label="Cuadrícula 9x9 de Shōgi"></div>
+          <div class="row-coords" id="row-coords" aria-hidden="true"></div>
+        </div>
+      </div>
+      <p class="board-hint" id="board-hint">
+        Selecciona una pieza de tu bando para ver sus movimientos legales, o haz clic en una pieza capturada de tu reserva para reincorporarla.
+      </p>
+    </section>
+
+    <!-- Columna Derecha: Reserva Inferior (Jugador Activo) + Historial -->
+    <aside class="side-panel side-right" aria-label="Panel del jugador inferior e historial">
+      <section class="player-card player-card-active" id="bottom-player-card">
+        <div class="player-header">
+          <span class="player-symbol" id="bottom-player-symbol" aria-hidden="true">☗</span>
+          <div class="player-meta">
+            <h2 id="bottom-player-title">Sente · Negro</h2>
+            <p class="player-name" id="bottom-player-name">Esperando jugador...</p>
+          </div>
+          <span class="turn-tag" id="bottom-turn-tag" hidden>Tu turno</span>
+        </div>
+        <div class="komadai" id="bottom-komadai" aria-label="Piezas capturadas del jugador inferior">
+          <p class="komadai-title">Piezas en mano (clic para reincorporar)</p>
+          <div class="komadai-grid" id="bottom-hand-grid"></div>
+        </div>
+      </section>
+
+      <section class="history-card" aria-labelledby="history-heading">
+        <div class="history-header">
+          <h2 id="history-heading">Registro de Jugadas</h2>
+          <span class="move-counter" id="move-counter">0 jugadas</span>
+        </div>
+        <ol class="history-list" id="history-list" aria-live="polite"></ol>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="footer">
+    <p>Motor de reglas en Python (<code>Tablero</code>, <code>Jugador</code>, <code>Pieza</code>) con sincronización online en tiempo real · Reglas oficiales de Nifu, Uchifuzume, Drops y Promociones.</p>
+  </footer>
+
+  <!-- Modal Nativo: Crear o Unirse a Sala Online / Local -->
+  <dialog id="lobby-dialog" aria-labelledby="lobby-dialog-title" closedby="any">
+    <div class="dialog-box">
+      <div class="dialog-header">
+        <h1 id="lobby-dialog-title">Sala de Juego · 2 Jugadores</h1>
+        <form method="dialog">
+          <button value="close" class="btn-icon" aria-label="Cerrar ventana de salas">✕</button>
+        </form>
+      </div>
+
+      <div class="lobby-grid">
+        <section class="lobby-section" aria-labelledby="create-room-heading">
+          <h2 id="create-room-heading">Crear Nueva Partida</h2>
+          <label class="field-label" for="player-name-create">Tu nombre</label>
+          <input type="text" id="player-name-create" class="text-input" placeholder="Ej. Jugador 1" maxlength="24" autocomplete="nickname" autofocus>
+
+          <fieldset class="choice-fieldset">
+            <legend>Modo de juego</legend>
+            <label class="radio-card">
+              <input type="radio" name="game-mode" value="online" checked>
+              <span>
+                <strong>Online en Tiempo Real (Link / Código)</strong>
+                <small>Cada jugador desde su propio dispositivo o navegador.</small>
+              </span>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="game-mode" value="local">
+              <span>
+                <strong>2 Jugadores en este Dispositivo</strong>
+                <small>Turnos compartidos en la misma pantalla sin esperar conexión.</small>
+              </span>
+            </label>
+          </fieldset>
+
+          <fieldset class="choice-fieldset" id="color-choice-group">
+            <legend>Elige tu bando inicial</legend>
+            <div class="radio-inline">
+              <label class="radio-pill">
+                <input type="radio" name="creator-color" value="negro" checked>
+                <span>☗ Sente (Negro · Empieza)</span>
+              </label>
+              <label class="radio-pill">
+                <input type="radio" name="creator-color" value="blanco">
+                <span>☖ Gote (Blanco · 2.º turno)</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <button type="button" class="btn btn-primary btn-block" id="btn-create-room">
+            Crear Sala y Empezar
+          </button>
+        </section>
+
+        <section class="lobby-section" aria-labelledby="join-room-heading">
+          <h2 id="join-room-heading">Unirse con Código de Sala</h2>
+          <p class="section-desc">Si tu rival ya creó una sala online, introduce el código de 6 caracteres:</p>
+          <label class="field-label" for="player-name-join">Tu nombre</label>
+          <input type="text" id="player-name-join" class="text-input" placeholder="Ej. Jugador 2" maxlength="24" autocomplete="nickname">
+
+          <label class="field-label" for="join-code-input">Código de sala</label>
+          <input type="text" id="join-code-input" class="text-input code-input" placeholder="EJ: A7K9M2" maxlength="6">
+
+          <button type="button" class="btn btn-accent btn-block" id="btn-join-room">
+            Unirse a la Sala
+          </button>
+          <p class="dialog-error" id="lobby-error" role="alert" hidden></p>
+        </section>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Modal Nativo: Confirmar Promoción (Nari) -->
+  <dialog id="promote-dialog" aria-labelledby="promote-dialog-title" closedby="none">
+    <div class="dialog-box dialog-compact">
+      <h1 id="promote-dialog-title">¿Promocionar pieza (<span lang="ja">成り</span>)?</h1>
+      <p id="promote-dialog-desc">Tu pieza entró en la zona de promoción enemiga (últimas 3 filas).</p>
+      <div class="promote-preview" id="promote-preview"></div>
+      <form method="dialog" class="dialog-actions">
+        <button value="no" class="btn">Mantener normal</button>
+        <button value="yes" class="btn btn-primary" autofocus>Promocionar (+)</button>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Modal Nativo: Glosario de Piezas y Reglas -->
+  <dialog id="rules-dialog" aria-labelledby="rules-dialog-title" closedby="any">
+    <div class="dialog-box dialog-wide">
+      <div class="dialog-header">
+        <h1 id="rules-dialog-title">Glosario de Piezas y Movimientos de Shōgi</h1>
+        <form method="dialog">
+          <button value="close" class="btn-icon" aria-label="Cerrar glosario" autofocus>✕</button>
+        </form>
+      </div>
+
+      <div class="rules-content">
+        <div class="pieces-guide-grid">
+          <article class="guide-card">
+            <div class="guide-koma"><span>王將</span><small>K · Rey</small></div>
+            <div>
+              <h2>Rey (<span lang="ja">王將 / 玉將</span> · K)</h2>
+              <p>Se mueve 1 casilla en cualquier dirección (ortogonal o diagonal). No promociona.</p>
+            </div>
+          </article>
+          <article class="guide-card">
+            <div class="guide-koma"><span>飛車</span><small>R → +R (龍王)</small></div>
+            <div>
+              <h2>Torre (<span lang="ja">飛車</span> · R)</h2>
+              <p>Se desliza cualquier número de casillas en cruz (vertical/horizontal). <strong>Promoción (Dragón):</strong> suma 1 paso en las 4 diagonales.</p>
+            </div>
+          </article>
+          <article class="guide-card">
+            <div class="guide-koma"><span>角行</span><small>B → +B (龍馬)</small></div>
+            <div>
+              <h2>Alfil (<span lang="ja">角行</span> · B)</h2>
+              <p>Se desliza cualquier número de casillas en diagonal. <strong>Promoción (Caballo Dragón):</strong> suma 1 paso ortogonal en cruz.</p>
+            </div>
+          </article>
+          <article class="guide-card">
+            <div class="guide-koma"><span>金將</span><small>G · Oro</small></div>
+            <div>
+              <h2>General de Oro (<span lang="ja">金將</span> · G)</h2>
+              <p>Mueve 1 casilla hacia adelante, a los lados, atrás o en las 2 diagonales delanteras (todas menos las 2 diagonales traseras).</p>
+            </div>
+          </article>
+          <article class="guide-card">
+            <div class="guide-koma"><span>銀將</span><small>S → +S (成銀)</small></div>
+            <div>
+              <h2>General de Plata (<span lang="ja">銀將</span> · S)</h2>
+              <p>Mueve 1 casilla hacia adelante o en las 4 diagonales. <strong>Promoción:</strong> pasa a mover como General de Oro.</p>
+            </div>
+          </article>
+          <article class="guide-card">
+            <div class="guide-koma"><span>桂馬</span><small>N → +N (成桂)</small></div>
+            <div>
+              <h2>Caballo (<span lang="ja">桂馬</span> · N)</h2>
+              <p>Salta 2 casillas hacia adelante y 1 a la izquierda o derecha (única pieza que salta). <strong>Promoción:</strong> mueve como General de Oro.</p>
+            </div>
+          </article>
+          <article class="guide-card">
+            <div class="guide-koma"><span>香車</span><small>L → +L (成香)</small></div>
+            <div>
+              <h2>Lancero (<span lang="ja">香車</span> · L)</h2>
+              <p>Se desliza cualquier número de casillas únicamente hacia adelante. <strong>Promoción:</strong> mueve como General de Oro.</p>
+            </div>
+          </article>
+          <article class="guide-card">
+            <div class="guide-koma"><span>歩兵</span><small>P → +P (と金)</small></div>
+            <div>
+              <h2>Peón (<span lang="ja">歩兵</span> · P)</h2>
+              <p>Avanza 1 casilla hacia adelante (captura también de frente). <strong>Promoción (Tokin):</strong> mueve como General de Oro.</p>
+            </div>
+          </article>
+        </div>
+
+        <section class="rules-notes" aria-labelledby="special-rules-heading">
+          <h2 id="special-rules-heading">Reglas Especiales Implementadas</h2>
+          <ul>
+            <li><strong> orientación en el tablero:</strong> En Shōgi las fichas no se distinguen por color de madera, sino por la dirección a la que apunta su punta pentagonal. <strong>Sente (Negro ☗)</strong> apunta hacia arriba (filas 8 → 0) y <strong>Gote (Blanco ☖)</strong> hacia abajo (filas 0 → 8).</li>
+            <li><strong>Reincorporación (Drops / <span lang="ja">打ち</span>):</strong> Las piezas capturadas pierden su promoción, pasan a tu <em>Komadai</em> (reserva) y en tu turno puedes colocarlas en cualquier casilla vacía.</li>
+            <li><strong>Nifu (<span lang="ja">二歩</span> - Dos Peones):</strong> No puedes reincorporar un peón en una columna donde ya tengas otro peón sin promocionar.</li>
+            <li><strong>Uchifuzume (<span lang="ja">打ち歩詰め</span>):</strong> No está permitido reincorporar un peón de la reserva dando jaque mate inmediato; sí puedes dar jaque mate moviendo un peón que ya estaba en el tablero.</li>
+            <li><strong>Casillas con movimiento futuro:</strong> Peones y lanceros no pueden reincorporarse en la última fila enemiga, ni los caballos en las dos últimas filas.</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
