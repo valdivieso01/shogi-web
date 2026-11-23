@@ -1,11 +1,15 @@
 import copy
+import hmac
 import json
+import os
 import queue
 import random
-import string
+import re
+import secrets
 import threading
 import time
 import uuid
+from collections import defaultdict, deque
 from flask import Flask, Response, jsonify, request, send_from_directory
 
 from jugador import Jugador
@@ -13,20 +17,106 @@ from piezas import Alfil, Caballo, GeneralOro, GeneralPlata, Lancero, Peon, Rey,
 from tablero import Tablero
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
+# Límite máximo de payload HTTP (16 KB) contra ataques de agotamiento de memoria
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
+
+# ==========================================
+# SEGURIDAD: IP, RATE LIMITING Y SANITIZACIÓN
+# ==========================================
+MAX_ROOMS = 200
+ROOM_IDLE_TTL_SECONDS = 1800  # 30 min
+WAITING_ROOM_TTL_SECONDS = 600  # 10 min
+PLAYER_IDLE_TTL_SECONDS = 120  # 2 min
+
+SAFE_CODE_RE = re.compile(r"^[A-Z0-9]{6,10}$")
+SAFE_ID_RE = re.compile(r"^[a-zA-Z0-9_-]{4,36}$")
+CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f<>\"'`&]")
+
+
+def get_client_ip() -> str:
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        first_ip = forwarded.split(",")[0].strip()
+        if first_ip:
+            return first_ip[:45]
+    return (request.remote_addr or "0.0.0.0")[:45]
+
+
+def sanitize_text(value: str | None, max_len: int = 24, default: str = "") -> str:
+    if not isinstance(value, str):
+        return default
+    cleaned = CONTROL_CHARS_RE.sub("", value).strip()
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned[:max_len] or default
+
+
+class SecurityGuard:
+    """Controla Rate Limiting por IP y límite de 1 conexión SSE / 1 sesión activa por IP."""
+
+    def __init__(self):
+        self.lock = threading.RLock()
+        self.requests_by_ip: dict[str, dict[str, deque]] = defaultdict(lambda: defaultdict(deque))
+        # ip -> queue.Queue (solo 1 conexión SSE de Lobby y 1 de Sala activa por IP)
+        self.active_lobby_sse_by_ip: dict[str, queue.Queue] = {}
+        self.active_room_sse_by_ip: dict[str, queue.Queue] = {}
+
+    def check_rate_limit(self, ip: str, bucket: str, max_calls: int, window_sec: int) -> bool:
+        now = time.time()
+        with self.lock:
+            q = self.requests_by_ip[ip][bucket]
+            while q and now - q[0] > window_sec:
+                q.popleft()
+            if len(q) >= max_calls:
+                return False
+            q.append(now)
+            return True
+
+    def register_lobby_sse(self, ip: str, q: queue.Queue):
+        with self.lock:
+            old_q = self.active_lobby_sse_by_ip.get(ip)
+            if old_q is not None and old_q is not q:
+                try:
+                    old_q.put_nowait("__CLOSE_REPLACED_BY_SAME_IP__")
+                except queue.Full:
+                    pass
+            self.active_lobby_sse_by_ip[ip] = q
+
+    def unregister_lobby_sse(self, ip: str, q: queue.Queue):
+        with self.lock:
+            if self.active_lobby_sse_by_ip.get(ip) is q:
+                del self.active_lobby_sse_by_ip[ip]
+
+    def register_room_sse(self, ip: str, q: queue.Queue):
+        with self.lock:
+            old_q = self.active_room_sse_by_ip.get(ip)
+            if old_q is not None and old_q is not q:
+                try:
+                    old_q.put_nowait("__CLOSE_REPLACED_BY_SAME_IP__")
+                except queue.Full:
+                    pass
+            self.active_room_sse_by_ip[ip] = q
+
+    def unregister_room_sse(self, ip: str, q: queue.Queue):
+        with self.lock:
+            if self.active_room_sse_by_ip.get(ip) is q:
+                del self.active_room_sse_by_ip[ip]
+
+
+SECURITY = SecurityGuard()
 
 PIECE_META = {
     "K": {
-        "kanji_negro": "王將",
-        "kanji_blanco": "玉將",
-        "kanji_promoted": "王將",
+        "kanji_negro": "王",
+        "kanji_blanco": "玉",
+        "kanji_promoted": "王",
         "romaji": "Gyokushō",
         "es": "Rey",
         "can_promote": False,
     },
     "R": {
-        "kanji_negro": "飛車",
-        "kanji_blanco": "飛車",
-        "kanji_promoted": "龍王",
+        "kanji_negro": "飛",
+        "kanji_blanco": "飛",
+        "kanji_promoted": "龍",
         "romaji": "Hisha",
         "romaji_promoted": "Ryūō",
         "es": "Torre",
@@ -34,66 +124,67 @@ PIECE_META = {
         "can_promote": True,
     },
     "B": {
-        "kanji_negro": "角行",
-        "kanji_blanco": "角行",
-        "kanji_promoted": "龍馬",
+        "kanji_negro": "角",
+        "kanji_blanco": "角",
+        "kanji_promoted": "馬",
         "romaji": "Kakugyō",
         "romaji_promoted": "Ryūma",
         "es": "Alfil",
-        "es_promoted": "Caballo Dragón",
+        "es_promoted": "C.Dragón",
         "can_promote": True,
     },
     "G": {
-        "kanji_negro": "金將",
-        "kanji_blanco": "金將",
-        "kanji_promoted": "金將",
+        "kanji_negro": "金",
+        "kanji_blanco": "金",
+        "kanji_promoted": "金",
         "romaji": "Kinshō",
         "es": "Oro",
         "can_promote": False,
     },
     "S": {
-        "kanji_negro": "銀將",
-        "kanji_blanco": "銀將",
-        "kanji_promoted": "成銀",
+        "kanji_negro": "銀",
+        "kanji_blanco": "銀",
+        "kanji_promoted": "全",
         "romaji": "Ginshō",
         "romaji_promoted": "Narigin",
         "es": "Plata",
-        "es_promoted": "Plata+ (Oro)",
+        "es_promoted": "Plata+",
         "can_promote": True,
     },
     "N": {
-        "kanji_negro": "桂馬",
-        "kanji_blanco": "桂馬",
-        "kanji_promoted": "成桂",
+        "kanji_negro": "桂",
+        "kanji_blanco": "桂",
+        "kanji_promoted": "圭",
         "romaji": "Keima",
         "romaji_promoted": "Narikei",
         "es": "Caballo",
-        "es_promoted": "Caballo+ (Oro)",
+        "es_promoted": "Caballo+",
         "can_promote": True,
     },
     "L": {
-        "kanji_negro": "香車",
-        "kanji_blanco": "香車",
-        "kanji_promoted": "成香",
+        "kanji_negro": "香",
+        "kanji_blanco": "香",
+        "kanji_promoted": "杏",
         "romaji": "Kyōsha",
         "romaji_promoted": "Narikyō",
         "es": "Lancero",
-        "es_promoted": "Lancero+ (Oro)",
+        "es_promoted": "Lancero+",
         "can_promote": True,
     },
     "P": {
-        "kanji_negro": "歩兵",
-        "kanji_blanco": "歩兵",
-        "kanji_promoted": "と金",
+        "kanji_negro": "歩",
+        "kanji_blanco": "歩",
+        "kanji_promoted": "と",
         "romaji": "Fuhyō",
         "romaji_promoted": "Tokin",
         "es": "Peón",
-        "es_promoted": "Tokin (Oro)",
+        "es_promoted": "Tokin",
         "can_promote": True,
     },
 }
 
 HAND_ORDER = ["R", "B", "G", "S", "N", "L", "P"]
+PIECE_VALUES = {"K": 1000, "R": 10, "B": 9, "G": 6, "S": 5, "N": 4, "L": 3, "P": 1}
 
 
 def is_in_promotion_zone(color: str, row: int) -> bool:
@@ -111,22 +202,32 @@ def is_mandatory_promotion(piece_code: str, color: str, to_row: int) -> bool:
 
 
 def format_coord(row: int, col: int) -> str:
-    # Notación tradicional 9..1 para columnas y a..i (más índice 0..8 entre paréntesis)
     shogi_col = 9 - col
     shogi_row = chr(ord("a") + row)
     return f"{shogi_col}{shogi_row} ({row},{col})"
 
 
 class GameRoom:
-    def __init__(self, code: str, mode: str = "online"):
+    def __init__(
+        self,
+        code: str,
+        mode: str = "online",
+        visibility: str = "public",
+        title: str = "",
+        owner_ip: str = "",
+    ):
         self.code = code
         self.mode = mode  # "online" | "local"
+        self.visibility = visibility if visibility in ("public", "private") else "public"
+        self.title = title or f"Dojo #{code}"
+        self.owner_ip = owner_ip
         self.lock = threading.RLock()
         self.subscribers: list[queue.Queue] = []
         self.created_at = time.time()
+        self.updated_at = time.time()
         self.players = {
-            "negro": {"token": None, "name": "Esperando jugador...", "connected": False},
-            "blanco": {"token": None, "name": "Esperando jugador...", "connected": False},
+            "negro": {"token": None, "name": "Esperando jugador...", "connected": False, "ip": None},
+            "blanco": {"token": None, "name": "Esperando jugador...", "connected": False, "ip": None},
         }
         self.reset_board()
 
@@ -167,7 +268,6 @@ class GameRoom:
                 sim_board = copy.deepcopy(tablero)
                 sim_board.modo_control_tablero = False
                 if jugador.jugar_pieza(sim_board, color, (r0, c0), (r1, c1)):
-                    # Comprobar que el propio rey no quede en jaque tras el movimiento
                     if not self.is_king_in_check(sim_board, color):
                         meta = PIECE_META.get(piece.nombre, {})
                         already_promoted = bool(getattr(piece, "promocion", False))
@@ -236,6 +336,111 @@ class GameRoom:
         else:
             self.turn = defender_color
 
+    def play_ai_turn(self, ai_color: str = "blanco") -> bool:
+        """Motor táctico del Bot del Dojo para partidas de 1 jugador."""
+        if self.winner or self.turn != ai_color:
+            return False
+
+        jugador = self.get_jugador(ai_color)
+        candidates = []
+
+        # 1. Evaluar todos los movimientos legales de piezas en el tablero
+        for r0 in range(9):
+            for c0 in range(9):
+                p = self.tablero.tab[r0][c0]
+                if p is not None and p.color == ai_color:
+                    for m in self.get_legal_moves_for_piece(self.tablero, ai_color, r0, c0):
+                        r1, c1 = m["row"], m["col"]
+                        target = self.tablero.tab[r1][c1]
+                        score = random.uniform(0.0, 0.4)
+                        if target is not None:
+                            score += PIECE_VALUES.get(target.nombre, 1) * 3.0
+                            if getattr(target, "promocion", False):
+                                score += 2.0
+                        if m["can_promote"]:
+                            score += 2.5
+                        # Preferir avanzar hacia el rey rival y centro
+                        if ai_color == "blanco" and r1 > r0:
+                            score += 0.4
+                        elif ai_color == "negro" and r1 < r0:
+                            score += 0.4
+                        score += (4 - abs(4 - c1)) * 0.1
+                        candidates.append(("move", score, (r0, c0), (r1, c1), m["can_promote"]))
+
+        # 2. Evaluar reincorporaciones legales (Drops) desde el Komadai
+        hand_codes = {p.nombre for p in self.tablero.piezas_muertas if p.color == ai_color}
+        for code in hand_codes:
+            drops = self.get_legal_drops_for_piece(self.tablero, ai_color, code)
+            for d in drops:
+                r1, c1 = d["row"], d["col"]
+                # Priorizar drops ofensivos en campo rival y centro
+                in_enemy_half = (r1 >= 4) if ai_color == "blanco" else (r1 <= 4)
+                if in_enemy_half or self.in_check == ai_color:
+                    score = PIECE_VALUES.get(code, 1) * 0.45 + (4 - abs(4 - c1)) * 0.15 + random.uniform(0.0, 0.4)
+                    candidates.append(("drop", score, code, (r1, c1), False))
+
+        if not candidates:
+            return False
+
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        action_type, _, src, dst, should_promote = candidates[0]
+        r1, c1 = dst
+
+        if action_type == "move":
+            r0, c0 = src
+            target_before = self.tablero.tab[r1][c1]
+            captured_code = target_before.nombre if target_before is not None else None
+            piece = self.tablero.tab[r0][c0]
+            was_promoted = bool(getattr(piece, "promocion", False))
+
+            self.tablero.modo_control_tablero = False
+            if not jugador.jugar_pieza(self.tablero, ai_color, (r0, c0), (r1, c1)):
+                return False
+
+            moved_piece = self.tablero.tab[r1][c1]
+            promoted_now = False
+            if should_promote and hasattr(moved_piece, "promocion") and not was_promoted:
+                moved_piece.promocion = True
+                promoted_now = True
+
+            self.move_count += 1
+            symbol = "☗" if ai_color == "negro" else "☖"
+            action_sym = "x" if captured_code else "→"
+            promo_suffix = "+" if promoted_now else ""
+            notation = f"{self.move_count}. {symbol} {moved_piece.nombre} {format_coord(r0, c0)} {action_sym} {format_coord(r1, c1)}{promo_suffix}"
+            self.last_move = {
+                "type": "move",
+                "color": ai_color,
+                "from": [r0, c0],
+                "to": [r1, c1],
+                "piece": moved_piece.nombre,
+                "captured": captured_code,
+                "promoted": promoted_now,
+                "notation": notation,
+            }
+            self.history.append(self.last_move)
+        else:
+            piece_code = src
+            if not self.tablero.reintroducir_pieza(jugador, piece_code, f"{r1} {c1}", self.tablero):
+                return False
+            self.move_count += 1
+            symbol = "☗" if ai_color == "negro" else "☖"
+            notation = f"{self.move_count}. {symbol} {piece_code}* → {format_coord(r1, c1)}"
+            self.last_move = {
+                "type": "drop",
+                "color": ai_color,
+                "from": None,
+                "to": [r1, c1],
+                "piece": piece_code,
+                "captured": None,
+                "promoted": False,
+                "notation": notation,
+            }
+            self.history.append(self.last_move)
+
+        self.evaluate_post_turn(ai_color)
+        return True
+
     def serialize_board(self) -> list[list[dict | None]]:
         grid = []
         for r in range(9):
@@ -290,16 +495,49 @@ class GameRoom:
                     )
         return result
 
-    def serialize(self) -> dict:
+    def get_status(self) -> str:
         both_ready = (
-            self.mode == "local"
+            self.mode in ("local", "ai")
             or (self.players["negro"]["connected"] and self.players["blanco"]["connected"])
         )
-        status = "finished" if self.winner else ("playing" if both_ready else "waiting")
+        return "finished" if self.winner else ("playing" if both_ready else "waiting")
+
+    def serialize_summary(self) -> dict:
+        open_seat = None
+        if not self.players["negro"]["connected"]:
+            open_seat = "negro"
+        elif not self.players["blanco"]["connected"]:
+            open_seat = "blanco"
+
         return {
             "room_code": self.code,
+            "title": self.title,
             "mode": self.mode,
-            "status": status,
+            "visibility": self.visibility,
+            "status": self.get_status(),
+            "turn": self.turn,
+            "move_count": self.move_count,
+            "open_seat": open_seat,
+            "created_at": int(self.created_at),
+            "players": {
+                "negro": {
+                    "name": self.players["negro"]["name"],
+                    "connected": self.players["negro"]["connected"],
+                },
+                "blanco": {
+                    "name": self.players["blanco"]["name"],
+                    "connected": self.players["blanco"]["connected"],
+                },
+            },
+        }
+
+    def serialize(self) -> dict:
+        return {
+            "room_code": self.code,
+            "title": self.title,
+            "mode": self.mode,
+            "visibility": self.visibility,
+            "status": self.get_status(),
             "turn": self.turn,
             "in_check": self.in_check,
             "winner": self.winner,
@@ -332,23 +570,184 @@ class GameRoom:
         for q in dead:
             if q in self.subscribers:
                 self.subscribers.remove(q)
+        broadcast_lobby()
 
 
 ROOMS: dict[str, GameRoom] = {}
-ROOMS_LOCK = threading.Lock()
+ROOMS_LOCK = threading.RLock()
 
 
 def generate_room_code() -> str:
     alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
     while True:
-        code = "".join(random.choices(alphabet, k=6))
+        code = "".join(secrets.choice(alphabet) for _ in range(6))
         if code not in ROOMS:
             return code
 
 
-def get_room_or_404(code: str) -> GameRoom | None:
+def cleanup_expired_resources():
+    now = time.time()
     with ROOMS_LOCK:
-        return ROOMS.get(code.upper())
+        expired_codes = []
+        for code, room in ROOMS.items():
+            age = now - room.updated_at
+            if room.get_status() == "waiting" and age > WAITING_ROOM_TTL_SECONDS:
+                expired_codes.append(code)
+            elif age > ROOM_IDLE_TTL_SECONDS:
+                expired_codes.append(code)
+        for code in expired_codes:
+            del ROOMS[code]
+
+
+def get_room_or_404(code: str) -> GameRoom | None:
+    clean = (code or "").strip().upper()
+    if not SAFE_CODE_RE.match(clean):
+        return None
+    cleanup_expired_resources()
+    with ROOMS_LOCK:
+        return ROOMS.get(clean)
+
+
+class LobbyManager:
+    def __init__(self):
+        self.lock = threading.RLock()
+        self.subscribers: list[queue.Queue] = []
+        # player_id -> {"player_id", "ip", "name", "status": "idle"|"searching", "last_seen", "match": None}
+        self.players: dict[str, dict] = {}
+        # ip -> player_id (garantiza 1 sola identidad en el Lobby por IP al mismo tiempo)
+        self.ip_to_player: dict[str, str] = {}
+        self.match_queue: list[str] = []
+
+    def touch_player(self, player_id: str, name: str, ip: str) -> str:
+        if not player_id or not SAFE_ID_RE.match(player_id):
+            player_id = secrets.token_hex(6)
+        with self.lock:
+            now = time.time()
+            # Limpiar jugadores inactivos por TTL
+            stale_ids = [
+                pid
+                for pid, p in self.players.items()
+                if now - p["last_seen"] > PLAYER_IDLE_TTL_SECONDS and not p.get("match")
+            ]
+            for pid in stale_ids:
+                old_ip = self.players[pid].get("ip")
+                if old_ip and self.ip_to_player.get(old_ip) == pid:
+                    del self.ip_to_player[old_ip]
+                if pid in self.match_queue:
+                    self.match_queue.remove(pid)
+                del self.players[pid]
+
+            # Regla de 1 conexión por IP: si esa IP ya tenía otro player_id activo, lo reemplazamos
+            existing_pid_for_ip = self.ip_to_player.get(ip)
+            if existing_pid_for_ip and existing_pid_for_ip != player_id:
+                if existing_pid_for_ip in self.match_queue:
+                    self.match_queue.remove(existing_pid_for_ip)
+                if existing_pid_for_ip in self.players and not self.players[existing_pid_for_ip].get("match"):
+                    del self.players[existing_pid_for_ip]
+
+            self.ip_to_player[ip] = player_id
+            clean_name = sanitize_text(name, max_len=24, default=f"Samurai-{player_id[:4].upper()}")
+            if player_id not in self.players:
+                self.players[player_id] = {
+                    "player_id": player_id,
+                    "ip": ip,
+                    "name": clean_name,
+                    "status": "idle",
+                    "last_seen": now,
+                    "match": None,
+                }
+            else:
+                self.players[player_id]["ip"] = ip
+                if name and name.strip():
+                    self.players[player_id]["name"] = clean_name
+                self.players[player_id]["last_seen"] = now
+            return player_id
+
+    def remove_player(self, player_id: str, ip: str | None = None):
+        with self.lock:
+            if player_id in self.match_queue:
+                self.match_queue.remove(player_id)
+            if player_id in self.players:
+                p_ip = self.players[player_id].get("ip")
+                if p_ip and self.ip_to_player.get(p_ip) == player_id:
+                    del self.ip_to_player[p_ip]
+                if not self.players[player_id].get("match"):
+                    del self.players[player_id]
+
+    def serialize(self) -> dict:
+        with ROOMS_LOCK:
+            public_rooms = [
+                r.serialize_summary()
+                for r in sorted(ROOMS.values(), key=lambda x: x.created_at, reverse=True)
+                if r.mode == "online" and r.visibility == "public"
+            ]
+
+        open_rooms = [r for r in public_rooms if r["status"] == "waiting"]
+        live_rooms = [r for r in public_rooms if r["status"] == "playing"]
+
+        with self.lock:
+            # Limpiar cola de jugadores inactivos
+            self.match_queue = [pid for pid in self.match_queue if pid in self.players]
+            online_list = [
+                {
+                    "player_id": p["player_id"],
+                    "name": p["name"],
+                    "status": "searching" if p["player_id"] in self.match_queue else p["status"],
+                }
+                for p in self.players.values()
+            ]
+            matches_by_player = {
+                pid: p["match"] for pid, p in self.players.items() if p.get("match") is not None
+            }
+
+        return {
+            "open_rooms": open_rooms[:20],
+            "live_rooms": live_rooms[:20],
+            "queue_count": len(self.match_queue),
+            "online_players": online_list[:40],
+            "matches": matches_by_player,
+        }
+
+    def broadcast(self):
+        payload = json.dumps(self.serialize())
+        with self.lock:
+            dead = []
+            for q in self.subscribers:
+                try:
+                    q.put_nowait(payload)
+                except queue.Full:
+                    dead.append(q)
+            for q in dead:
+                if q in self.subscribers:
+                    self.subscribers.remove(q)
+
+
+LOBBY = LobbyManager()
+
+
+def broadcast_lobby():
+    LOBBY.broadcast()
+
+
+@app.after_request
+def add_security_and_cache_headers(response):
+    if request.path == "/" or request.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    # Cabeceras de seguridad contra XSS, Clickjacking y MIME Sniffing
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.google.com https://*.doubleclick.net; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' https://pagead2.googlesyndication.com https://*.googlesyndication.com; "
+        "frame-src https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.google.com; "
+        "frame-ancestors 'none';"
+    )
+    return response
 
 
 @app.route("/")
@@ -356,32 +755,517 @@ def index():
     return send_from_directory(app.static_folder, "index.html")
 
 
+@app.route("/ads.txt")
+def ads_txt():
+    return send_from_directory(app.static_folder, "ads.txt", mimetype="text/plain")
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory(app.static_folder, "icon.svg", mimetype="image/svg+xml")
+
+
+@app.route("/manifest.json")
+def manifest_json():
+    manifest = {
+        "name": "Shōgi Dojo Online (将棋) - Ajedrez Japonés para 2 Jugadores",
+        "short_name": "Shōgi Online",
+        "description": "Juega Shōgi (Ajedrez Tradicional Japonés) online gratis en tiempo real para 2 jugadores con Lobby de Matchmaking y Academia interactiva.",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#181411",
+        "theme_color": "#dfb15b",
+        "icons": [
+            {
+                "src": "/static/icon.svg",
+                "sizes": "any",
+                "type": "image/svg+xml",
+            }
+        ],
+    }
+    return jsonify(manifest)
+
+
+@app.route("/robots.txt")
+def robots_txt():
+    base_url = request.url_root.rstrip("/")
+    lines = [
+        "User-agent: *",
+        "Allow: /",
+        "Disallow: /api/",
+        f"Sitemap: {base_url}/sitemap.xml",
+    ]
+    return Response("\n".join(lines) + "\n", mimetype="text/plain")
+
+
+@app.route("/sitemap.xml")
+def sitemap_xml():
+    base_url = request.url_root.rstrip("/")
+    today = time.strftime("%Y-%m-%d")
+    pages = [
+        ("/", "daily", "1.0"),
+        ("/sobre-nosotros", "monthly", "0.8"),
+        ("/politica-de-privacidad", "monthly", "0.7"),
+        ("/terminos-de-servicio", "monthly", "0.7"),
+    ]
+    urls_xml = "".join(
+        f"""  <url>
+    <loc>{base_url}{path}</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>{freq}</changefreq>
+    <priority>{prio}</priority>
+  </url>\n"""
+        for path, freq, prio in pages
+    )
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{urls_xml}</urlset>"""
+    return Response(xml, mimetype="application/xml")
+
+
+def render_legal_page(title: str, description: str, body_html: str) -> Response:
+    year = time.strftime("%Y")
+    html = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title} | Shōgi Dojo Online (将棋)</title>
+  <meta name="description" content="{description}">
+  <meta name="author" content="Javier Valdivieso">
+  <meta name="robots" content="index, follow">
+  <meta name="google-adsense-account" content="ca-pub-4665232577336299">
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/styles.css?v=6">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4665232577336299" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-koma" aria-hidden="true">王</span>
+      <div>
+        <h1>Shōgi <span lang="ja">将棋</span></h1>
+        <p class="subtitle">Dojo Online · Matchmaking y Salas en Tiempo Real</p>
+      </div>
+    </div>
+    <div class="room-bar">
+      <a href="/" class="btn btn-primary" style="text-decoration:none;">← Volver al Dojo / Tablero</a>
+    </div>
+  </header>
+
+  <main class="legal-page-container">
+    <article class="legal-card">
+      {body_html}
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="site-footer-top">
+        <div class="site-footer-brand">
+          <div class="site-footer-logo">
+            <span class="footer-koma-icon" aria-hidden="true">王</span>
+            <span>Shōgi Dojo Online (<span lang="ja">将棋</span>)</span>
+          </div>
+          <p>
+            Plataforma web comunitaria e independiente para jugar al Shōgi (Ajedrez Tradicional Japonés) online en tiempo real para 2 jugadores, con motor de reglas oficiales en Python, Lobby de Matchmaking y Academia interactiva paso a paso en español.
+          </p>
+        </div>
+        <nav class="site-footer-nav" aria-label="Enlaces legales y de información">
+          <a href="/">Lobby &amp; Jugar</a>
+          <a href="/sobre-nosotros">Sobre Nosotros &amp; Contacto</a>
+          <a href="/politica-de-privacidad">Política de Privacidad</a>
+          <a href="/terminos-de-servicio">Términos de Servicio</a>
+        </nav>
+      </div>
+      <div class="site-footer-bottom">
+        <p>© {year} Shōgi Dojo Online. Creado y mantenido por <strong>Javier Valdivieso</strong> (Mendoza, Argentina).</p>
+        <p>Código abierto bajo Licencia MIT · <a href="https://github.com/valdivieso01/shogi-web" target="_blank" rel="noopener noreferrer">GitHub: valdivieso01/shogi-web</a></p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>"""
+    return Response(html, mimetype="text/html")
+
+
+@app.route("/sobre-nosotros")
+def page_sobre_nosotros():
+    body = """
+      <h1>Sobre Nosotros &amp; Contacto</h1>
+      <p class="legal-updated">Proyecto Independiente de Ajedrez Japonés en Español</p>
+
+      <section class="legal-section">
+        <h2>¿Qué es Shōgi Dojo Online?</h2>
+        <p>
+          <strong>Shōgi Dojo Online (将棋)</strong> nació con la misión de acercar el milenario juego de estrategia japonés —el <em>Shōgi</em>— a la comunidad hispanohablante mediante una plataforma web gratuita, rápida, sin registros obligatorios y con explicaciones claras en español.
+        </p>
+        <p>La plataforma combina:</p>
+        <ul>
+          <li><strong>Motor oficial de reglas en Python (POO)</strong>: Valida movimientos individuales de cada pieza, coronaciones en zona enemiga (<em>Nari</em>), reincorporación de piezas capturadas desde el <em>Komadai</em> (<em>Drops</em>), detección algorítmica de jaque (<em>Ōte</em>), jaque mate (<em>Tsumi</em>) y prohibiciones tradicionales como <em>Nifu</em> (dos peones en la misma columna) y <em>Uchifuzume</em>.</li>
+          <li><strong>Lobby de Matchmaking en Tiempo Real</strong>: Emparejamiento automático entre jugadores online, salas públicas abiertas, salas privadas mediante código o enlace directo y modo espectador en vivo mediante Server-Sent Events (SSE).</li>
+          <li><strong>Academia Interactiva de 12 Lecciones</strong>: Un curso práctico guiado con brújulas visuales de movimiento (3×3 y 5×5) donde cualquier principiante aprende cómo mueve cada ficha sin tener que memorizar los caracteres Kanji a ciegas.</li>
+        </ul>
+      </section>
+
+      <section class="legal-section legal-highlight-box">
+        <h2>El Creador y Misión</h2>
+        <p>
+          El proyecto fue creado y es mantenido de forma independiente por <strong>Javier Valdivieso</strong>, desarrollador de software en Mendoza, Argentina. El objetivo es ofrecer un punto de encuentro accesible y educativo que combine fichas pentagonales tradicionales (<em>Koma</em>) con ayudas visuales pensadas para jugadores de habla hispana.
+        </p>
+        <div class="legal-badges">
+          <span>GitHub Motor: <a href="https://github.com/valdivieso01/shogi" target="_blank" rel="noopener noreferrer">valdivieso01/shogi</a></span>
+          <span>GitHub Web: <a href="https://github.com/valdivieso01/shogi-web" target="_blank" rel="noopener noreferrer">valdivieso01/shogi-web</a></span>
+          <span>Ubicación: Mendoza, Argentina</span>
+        </div>
+      </section>
+
+      <section class="legal-section">
+        <h2>Contacto y Sugerencias</h2>
+        <p>
+          ¿Encontraste algún caso borde en el motor de reglas, tienes sugerencias para nuevas lecciones en la Academia o deseas realizar una consulta sobre privacidad o publicidad?
+        </p>
+        <p>
+          Puedes comunicarte directamente por correo electrónico a:
+          <a href="mailto:hjavier.valdivieso@outlook.es" class="legal-mail-link">hjavier.valdivieso@outlook.es</a>
+        </p>
+      </section>
+    """
+    return render_legal_page(
+        "Sobre Nosotros y Contacto",
+        "Conoce qué es Shōgi Dojo Online, la historia del proyecto de ajedrez japonés en español y cómo contactar con su creador Javier Valdivieso.",
+        body,
+    )
+
+
+@app.route("/politica-de-privacidad")
+def page_privacidad():
+    body = """
+      <h1>Política de Privacidad</h1>
+      <p class="legal-updated">Última actualización: Noviembre de 2026</p>
+
+      <section class="legal-section">
+        <h2>1. Información general</h2>
+        <p>
+          En <strong>Shōgi Dojo Online (将棋)</strong>, la privacidad de nuestros visitantes y jugadores es de suma importancia. Este documento describe los tipos de información que se reciben y procesan al utilizar nuestra plataforma de juego y aprendizaje, así como el uso de cookies publicitarias conforme a los estándares de <strong>Google AdSense</strong>.
+        </p>
+      </section>
+
+      <section class="legal-section">
+        <h2>2. Datos de juego y almacenamiento local</h2>
+        <p>
+          Para facilitar las partidas multijugador en tiempo real sin exigir la creación de cuentas con datos personales sensibles, Shōgi Dojo Online almacena únicamente en tu navegador (<code>localStorage</code> y <code>sessionStorage</code>) el apodo o <em>nickname</em> elegido voluntariamente y un identificador temporal de sesión para reconectarte a tu sala en caso de recarga de página.
+        </p>
+      </section>
+
+      <section class="legal-section">
+        <h2>3. Cookies y Publicidad de Google AdSense</h2>
+        <p>
+          Este sitio web utiliza servicios publicitarios de terceros, principalmente <strong>Google AdSense</strong> (identificador de editor <code>ca-pub-4665232577336299</code>). Google, como proveedor externo, utiliza cookies para publicar anuncios relevantes en nuestro sitio:
+        </p>
+        <ul>
+          <li>Google utiliza cookies asociadas con anuncios (como la cookie de DoubleClick / DART) para mostrar anuncios basados en las visitas previas de los usuarios a este sitio web o a otros sitios en Internet.</li>
+          <li>Los usuarios pueden inhabilitar el uso de cookies para publicidad personalizada visitando la <a href="https://adssettings.google.com/" target="_blank" rel="noopener noreferrer">Configuración de anuncios de Google</a>.</li>
+          <li>Para obtener más detalles sobre cómo Google trata los datos en sitios asociados, consulta: <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer">Cómo utiliza Google la información de sitios web o aplicaciones que utilizan nuestros servicios</a>.</li>
+        </ul>
+      </section>
+
+      <section class="legal-section">
+        <h2>4. Archivos de registro y analíticas</h2>
+        <p>
+          Como la mayoría de los servidores web estándar, el sistema registra eventos técnicos básicos (dirección IP anónima, tipo de navegador, fecha/hora y código de respuesta HTTP) exclusivamente con fines de diagnóstico técnico, prevención de abuso en las salas de juego y estabilidad del servicio.
+        </p>
+      </section>
+
+      <section class="legal-section">
+        <h2>5. Enlaces a sitios externos</h2>
+        <p>
+          Este sitio puede contener enlaces a repositorios de código abierto en GitHub o recursos educativos externos. No somos responsables de las políticas de privacidad ni de los contenidos de dichos sitios externos.
+        </p>
+      </section>
+
+      <section class="legal-section">
+        <h2>6. Contacto</h2>
+        <p>
+          Para cualquier consulta sobre esta Política de Privacidad, puedes escribirnos a <a href="mailto:hjavier.valdivieso@outlook.es">hjavier.valdivieso@outlook.es</a> o visitar la sección <a href="/sobre-nosotros">Sobre Nosotros y Contacto</a>.
+        </p>
+      </section>
+    """
+    return render_legal_page(
+        "Política de Privacidad",
+        "Política de privacidad, uso de cookies y configuración de Google AdSense de Shōgi Dojo Online.",
+        body,
+    )
+
+
+@app.route("/terminos-de-servicio")
+def page_terminos():
+    body = """
+      <h1>Términos de Servicio y Aviso Legal</h1>
+      <p class="legal-updated">Última actualización: Noviembre de 2026</p>
+
+      <section class="legal-section">
+        <h2>1. Naturaleza del servicio</h2>
+        <p>
+          <strong>Shōgi Dojo Online</strong> es una plataforma educativa y recreativa gratuita que permite aprender y jugar al Shōgi (ajedrez tradicional japonés) en línea con otros usuarios o en modo local. Al acceder y utilizar el sitio, aceptas estos términos básicos de convivencia y uso.
+        </p>
+      </section>
+
+      <section class="legal-section">
+        <h2>2. Conducta en el Lobby y Salas de Juego</h2>
+        <p>
+          Al elegir un nombre de jugador (<em>nickname</em>) o título para una sala pública en el Lobby del Dojo, el usuario se compromete a no utilizar:
+        </p>
+        <ul>
+          <li>Lenguaje ofensivo, discriminatorio, difamatorio o que incite al odio.</li>
+          <li>Spam publicitario, URLs maliciosas o suplantación de identidad.</li>
+          <li>Scripts automatizados o ataques de denegación de servicio contra los flujos en tiempo real (SSE) o la cola de emparejamiento.</li>
+        </ul>
+      </section>
+
+      <section class="legal-section">
+        <h2>3. Propiedad intelectual y Licencia MIT</h2>
+        <p>
+          El código fuente del motor de Shōgi y su interfaz web se distribuye con fines educativos y comunitarios bajo la <strong>Licencia MIT</strong> en GitHub (<a href="https://github.com/valdivieso01/shogi-web" target="_blank" rel="noopener noreferrer">valdivieso01/shogi-web</a>).
+        </p>
+      </section>
+
+      <section class="legal-section">
+        <h2>4. Exención de responsabilidad</h2>
+        <p>
+          El servicio se proporciona &ldquo;tal cual&rdquo;, sin garantías de disponibilidad ininterrumpida. Las salas de juego en memoria son efímeras y están destinadas a partidas recreativas en tiempo real.
+        </p>
+      </section>
+    """
+    return render_legal_page(
+        "Términos de Servicio",
+        "Términos y condiciones de uso del sitio web y Lobby multijugador Shōgi Dojo Online.",
+        body,
+    )
+
+
+@app.route("/api/lobby", methods=["GET"])
+def get_lobby():
+    ip = get_client_ip()
+    if not SECURITY.check_rate_limit(ip, "lobby_get", max_calls=60, window_sec=60):
+        return jsonify({"error": "Demasiadas peticiones desde tu IP. Espera unos segundos."}), 429
+    player_id = request.args.get("player_id") or ""
+    name = request.args.get("name") or ""
+    if player_id:
+        LOBBY.touch_player(player_id, name, ip)
+    return jsonify(LOBBY.serialize())
+
+
+@app.route("/api/lobby/matchmake", methods=["POST"])
+def lobby_matchmake():
+    ip = get_client_ip()
+    if not SECURITY.check_rate_limit(ip, "matchmake", max_calls=10, window_sec=60):
+        return jsonify({"error": "Demasiados intentos de búsqueda desde tu IP. Espera un momento."}), 429
+
+    data = request.get_json(silent=True) or {}
+    raw_pid = (data.get("player_id") or "").strip()
+    name = sanitize_text(data.get("name"), max_len=24)
+    player_id = LOBBY.touch_player(raw_pid, name, ip)
+
+    with LOBBY.lock:
+        LOBBY.players[player_id]["match"] = None
+
+        # Regla de seguridad por IP: un jugador no puede emparejarse contra su propia dirección IP
+        opponent_id = next(
+            (
+                pid
+                for pid in LOBBY.match_queue
+                if pid != player_id
+                and pid in LOBBY.players
+                and LOBBY.players[pid].get("ip") != ip
+            ),
+            None,
+        )
+
+        if opponent_id:
+            LOBBY.match_queue.remove(opponent_id)
+            if player_id in LOBBY.match_queue:
+                LOBBY.match_queue.remove(player_id)
+
+            opponent = LOBBY.players[opponent_id]
+            me = LOBBY.players[player_id]
+
+            colors = ["negro", "blanco"]
+            random.shuffle(colors)
+            opp_color, my_color = colors[0], colors[1]
+
+            with ROOMS_LOCK:
+                cleanup_expired_resources()
+                code = generate_room_code()
+                title = f"{opponent['name']} vs {me['name']}"
+                room = GameRoom(code=code, mode="online", visibility="public", title=title, owner_ip=ip)
+                opp_token = secrets.token_urlsafe(24)
+                my_token = secrets.token_urlsafe(24)
+
+                room.players[opp_color] = {
+                    "token": opp_token,
+                    "name": opponent["name"],
+                    "connected": True,
+                    "ip": opponent.get("ip"),
+                }
+                room.players[my_color] = {
+                    "token": my_token,
+                    "name": me["name"],
+                    "connected": True,
+                    "ip": ip,
+                }
+                ROOMS[code] = room
+
+            room_state = room.serialize()
+            opp_assignment = {
+                "room_code": code,
+                "player_token": opp_token,
+                "assigned_color": opp_color,
+                "state": room_state,
+            }
+            my_assignment = {
+                "room_code": code,
+                "player_token": my_token,
+                "assigned_color": my_color,
+                "state": room_state,
+            }
+
+            opponent["status"] = "idle"
+            opponent["match"] = opp_assignment
+            me["status"] = "idle"
+            me["match"] = my_assignment
+
+            broadcast_lobby()
+            return jsonify({"status": "matched", "player_id": player_id, **my_assignment})
+
+        # Eliminar de la cola cualquier otra entrada previa que tuviera la misma IP
+        LOBBY.match_queue = [
+            pid
+            for pid in LOBBY.match_queue
+            if pid in LOBBY.players and LOBBY.players[pid].get("ip") != ip
+        ]
+        LOBBY.match_queue.append(player_id)
+        LOBBY.players[player_id]["status"] = "searching"
+
+    broadcast_lobby()
+    return jsonify({"status": "searching", "player_id": player_id, "queue_count": len(LOBBY.match_queue)})
+
+
+@app.route("/api/lobby/matchmake/cancel", methods=["POST"])
+def lobby_matchmake_cancel():
+    ip = get_client_ip()
+    data = request.get_json(silent=True) or {}
+    player_id = (data.get("player_id") or "").strip()
+    with LOBBY.lock:
+        LOBBY.match_queue = [
+            pid
+            for pid in LOBBY.match_queue
+            if pid != player_id and (pid not in LOBBY.players or LOBBY.players[pid].get("ip") != ip)
+        ]
+        if player_id in LOBBY.players:
+            LOBBY.players[player_id]["status"] = "idle"
+            LOBBY.players[player_id]["match"] = None
+    broadcast_lobby()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/lobby/stream", methods=["GET"])
+def stream_lobby():
+    ip = get_client_ip()
+    raw_pid = (request.args.get("player_id") or "").strip()
+    name = sanitize_text(request.args.get("name"), max_len=24)
+    player_id = LOBBY.touch_player(raw_pid, name, ip)
+
+    q: queue.Queue = queue.Queue(maxsize=32)
+    # Solo 1 conexión SSE de Lobby activa por IP (cierra la anterior si abre otra pestaña)
+    SECURITY.register_lobby_sse(ip, q)
+    with LOBBY.lock:
+        LOBBY.subscribers.append(q)
+    broadcast_lobby()
+
+    def event_stream():
+        try:
+            yield f"data: {json.dumps(LOBBY.serialize())}\n\n"
+            while True:
+                try:
+                    msg = q.get(timeout=20)
+                    if msg == "__CLOSE_REPLACED_BY_SAME_IP__":
+                        yield f'data: {json.dumps({"replaced_by_same_ip": True})}\n\n'
+                        break
+                    yield f"data: {msg}\n\n"
+                except queue.Empty:
+                    LOBBY.touch_player(player_id, name, ip)
+                    yield ": keepalive\n\n"
+        finally:
+            SECURITY.unregister_lobby_sse(ip, q)
+            with LOBBY.lock:
+                if q in LOBBY.subscribers:
+                    LOBBY.subscribers.remove(q)
+            LOBBY.remove_player(player_id, ip)
+            broadcast_lobby()
+
+    headers = {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+    }
+    return Response(event_stream(), headers=headers)
+
+
 @app.route("/api/rooms", methods=["POST"])
 def create_room():
+    ip = get_client_ip()
+    if not SECURITY.check_rate_limit(ip, "create_room", max_calls=6, window_sec=60):
+        return jsonify({"error": "Has creado demasiadas salas en poco tiempo desde esta IP. Espera 1 minuto."}), 429
+
     data = request.get_json(silent=True) or {}
     mode = data.get("mode", "online")
-    if mode not in ("online", "local"):
+    if mode not in ("online", "local", "ai"):
         mode = "online"
+    visibility = data.get("visibility", "public")
+    if visibility not in ("public", "private"):
+        visibility = "public"
+    if mode in ("local", "ai"):
+        visibility = "private"
     preferred_color = data.get("color", "negro")
     if preferred_color not in ("negro", "blanco"):
         preferred_color = "negro"
-    player_name = (data.get("name") or "").strip()[:24] or (
-        "Sente (Negro)" if preferred_color == "negro" else "Gote (Blanco)"
+    player_name = sanitize_text(
+        data.get("name"),
+        max_len=24,
+        default="Sente (Negro)" if preferred_color == "negro" else "Gote (Blanco)",
     )
+    room_title = sanitize_text(data.get("title"), max_len=36, default=f"Sala de {player_name}")
 
     with ROOMS_LOCK:
+        cleanup_expired_resources()
+        if len(ROOMS) >= MAX_ROOMS:
+            return jsonify({"error": "El servidor alcanzó el límite máximo de salas activas. Intenta en unos minutos."}), 503
+
+        # Regla 1 Sala en Espera por IP: si esta IP ya tenía una sala en espera ('waiting'), se elimina la anterior
+        stale_waiting = [
+            c for c, r in ROOMS.items() if r.owner_ip == ip and r.get_status() == "waiting"
+        ]
+        for c in stale_waiting:
+            del ROOMS[c]
+
         code = generate_room_code()
-        room = GameRoom(code=code, mode=mode)
-        token = uuid.uuid4().hex
+        room = GameRoom(code=code, mode=mode, visibility=visibility, title=room_title, owner_ip=ip)
+        token = secrets.token_urlsafe(24)
         if mode == "local":
-            room.players["negro"] = {"token": token, "name": "Jugador Negro (Sente)", "connected": True}
-            room.players["blanco"] = {"token": token, "name": "Jugador Blanco (Gote)", "connected": True}
+            room.players["negro"] = {"token": token, "name": "Jugador Negro (Sente)", "connected": True, "ip": ip}
+            room.players["blanco"] = {"token": token, "name": "Jugador Blanco (Gote)", "connected": True, "ip": ip}
             assigned_color = "ambos"
+        elif mode == "ai":
+            room.players["negro"] = {"token": token, "name": player_name, "connected": True, "ip": ip}
+            room.players["blanco"] = {"token": "AI_BOT", "name": "Sensei Bot 🤖", "connected": True, "ip": "AI"}
+            assigned_color = "negro"
         else:
-            room.players[preferred_color] = {"token": token, "name": player_name, "connected": True}
+            room.players[preferred_color] = {"token": token, "name": player_name, "connected": True, "ip": ip}
             assigned_color = preferred_color
         ROOMS[code] = room
 
+    broadcast_lobby()
     return jsonify(
         {
             "room_code": code,
@@ -394,15 +1278,21 @@ def create_room():
 
 @app.route("/api/rooms/<room_code>/join", methods=["POST"])
 def join_room(room_code: str):
+    ip = get_client_ip()
+    if not SECURITY.check_rate_limit(ip, "join_room", max_calls=15, window_sec=60):
+        return jsonify({"error": "Demasiados intentos de conexión desde tu IP. Espera unos segundos."}), 429
+
     room = get_room_or_404(room_code)
     if not room:
         return jsonify({"error": "La sala indicada no existe."}), 404
 
     data = request.get_json(silent=True) or {}
     existing_token = data.get("player_token")
-    player_name = (data.get("name") or "").strip()[:24]
+    player_name = sanitize_text(data.get("name"), max_len=24)
+    as_spectator = bool(data.get("spectate", False))
 
     with room.lock:
+        room.updated_at = time.time()
         if room.mode == "local":
             return jsonify(
                 {
@@ -413,43 +1303,53 @@ def join_room(room_code: str):
                 }
             )
 
-        # Reconexión con token existente
+        # 1. Reconexión por token criptográfico o por misma IP ya sentada en la sala
         for color in ("negro", "blanco"):
-            if existing_token and room.players[color]["token"] == existing_token:
+            seat_token = room.players[color]["token"]
+            seat_ip = room.players[color].get("ip")
+            token_matches = (
+                isinstance(existing_token, str)
+                and isinstance(seat_token, str)
+                and hmac.compare_digest(existing_token, seat_token)
+            )
+            ip_matches = seat_ip == ip and room.players[color]["connected"]
+            if token_matches or ip_matches:
                 if player_name:
                     room.players[color]["name"] = player_name
                 room.players[color]["connected"] = True
+                room.players[color]["ip"] = ip
                 room.broadcast()
                 return jsonify(
                     {
                         "room_code": room.code,
-                        "player_token": existing_token,
+                        "player_token": seat_token,
                         "assigned_color": color,
                         "state": room.serialize(),
                     }
                 )
 
-        # Asignar asiento libre
-        for color in ("negro", "blanco"):
-            if not room.players[color]["connected"]:
-                token = uuid.uuid4().hex
-                default_name = "Sente (Negro)" if color == "negro" else "Gote (Blanco)"
-                room.players[color] = {
-                    "token": token,
-                    "name": player_name or default_name,
-                    "connected": True,
-                }
-                room.broadcast()
-                return jsonify(
-                    {
-                        "room_code": room.code,
-                        "player_token": token,
-                        "assigned_color": color,
-                        "state": room.serialize(),
+        if not as_spectator:
+            # Asignar asiento libre (si la IP aún no ocupa el otro asiento)
+            for color in ("negro", "blanco"):
+                if not room.players[color]["connected"]:
+                    token = secrets.token_urlsafe(24)
+                    default_name = "Sente (Negro)" if color == "negro" else "Gote (Blanco)"
+                    room.players[color] = {
+                        "token": token,
+                        "name": player_name or default_name,
+                        "connected": True,
+                        "ip": ip,
                     }
-                )
+                    room.broadcast()
+                    return jsonify(
+                        {
+                            "room_code": room.code,
+                            "player_token": token,
+                            "assigned_color": color,
+                            "state": room.serialize(),
+                        }
+                    )
 
-        # Ambos asientos ocupados -> Espectador
         return jsonify(
             {
                 "room_code": room.code,
@@ -503,13 +1403,21 @@ def authorize_action(room: GameRoom, token: str | None) -> tuple[bool, str]:
     if room.mode == "local":
         return True, ""
     expected_token = room.players[room.turn]["token"]
-    if not expected_token or token != expected_token:
+    if (
+        not expected_token
+        or not isinstance(token, str)
+        or not hmac.compare_digest(token, expected_token)
+    ):
         return False, "No es tu turno o no tienes permiso para mover estas piezas."
     return True, ""
 
 
 @app.route("/api/rooms/<room_code>/move", methods=["POST"])
 def make_move(room_code: str):
+    ip = get_client_ip()
+    if not SECURITY.check_rate_limit(ip, "game_action", max_calls=45, window_sec=60):
+        return jsonify({"error": "Demasiadas jugadas por minuto desde tu IP."}), 429
+
     room = get_room_or_404(room_code)
     if not room:
         return jsonify({"error": "Sala no encontrada."}), 404
@@ -518,15 +1426,19 @@ def make_move(room_code: str):
     token = data.get("player_token")
     from_pos = data.get("from")
     to_pos = data.get("to")
-    promote_choice = data.get("promote")  # True, False o None (auto)
+    promote_choice = data.get("promote")
 
     if not (isinstance(from_pos, list) and isinstance(to_pos, list) and len(from_pos) == 2 and len(to_pos) == 2):
         return jsonify({"error": "Coordenadas inválidas."}), 400
 
-    r0, c0 = int(from_pos[0]), int(from_pos[1])
-    r1, c1 = int(to_pos[0]), int(to_pos[1])
+    try:
+        r0, c0 = int(from_pos[0]), int(from_pos[1])
+        r1, c1 = int(to_pos[0]), int(to_pos[1])
+    except (ValueError, TypeError):
+        return jsonify({"error": "Coordenadas no numéricas."}), 400
 
     with room.lock:
+        room.updated_at = time.time()
         ok, err = authorize_action(room, token)
         if not ok:
             return jsonify({"error": err}), 403
@@ -549,7 +1461,6 @@ def make_move(room_code: str):
         captured_code = target_before.nombre if target_before is not None else None
         was_promoted = bool(getattr(piece, "promocion", False))
 
-        # Ejecutamos la jugada en el motor original
         room.tablero.modo_control_tablero = False
         if not jugador.jugar_pieza(room.tablero, color, (r0, c0), (r1, c1)):
             return jsonify({"error": "No se puede realizar la jugada."}), 400
@@ -580,12 +1491,18 @@ def make_move(room_code: str):
         room.history.append(room.last_move)
 
         room.evaluate_post_turn(color)
+        if room.mode == "ai" and not room.winner and room.turn == "blanco":
+            room.play_ai_turn("blanco")
         room.broadcast()
         return jsonify({"ok": True, "state": room.serialize()})
 
 
 @app.route("/api/rooms/<room_code>/drop", methods=["POST"])
 def make_drop(room_code: str):
+    ip = get_client_ip()
+    if not SECURITY.check_rate_limit(ip, "game_action", max_calls=45, window_sec=60):
+        return jsonify({"error": "Demasiadas jugadas por minuto desde tu IP."}), 429
+
     room = get_room_or_404(room_code)
     if not room:
         return jsonify({"error": "Sala no encontrada."}), 404
@@ -598,9 +1515,13 @@ def make_drop(room_code: str):
     if not (isinstance(to_pos, list) and len(to_pos) == 2 and piece_code in PIECE_META):
         return jsonify({"error": "Datos de reincorporación inválidos."}), 400
 
-    r1, c1 = int(to_pos[0]), int(to_pos[1])
+    try:
+        r1, c1 = int(to_pos[0]), int(to_pos[1])
+    except (ValueError, TypeError):
+        return jsonify({"error": "Coordenadas no numéricas."}), 400
 
     with room.lock:
+        room.updated_at = time.time()
         ok, err = authorize_action(room, token)
         if not ok:
             return jsonify({"error": err}), 403
@@ -637,6 +1558,8 @@ def make_drop(room_code: str):
         room.history.append(room.last_move)
 
         room.evaluate_post_turn(color)
+        if room.mode == "ai" and not room.winner and room.turn == "blanco":
+            room.play_ai_turn("blanco")
         room.broadcast()
         return jsonify({"ok": True, "state": room.serialize()})
 
@@ -688,11 +1611,13 @@ def resign_room(room_code: str):
 
 @app.route("/api/rooms/<room_code>/stream", methods=["GET"])
 def stream_room(room_code: str):
+    ip = get_client_ip()
     room = get_room_or_404(room_code)
     if not room:
         return jsonify({"error": "Sala no encontrada."}), 404
 
     q: queue.Queue = queue.Queue(maxsize=32)
+    SECURITY.register_room_sse(ip, q)
     with room.lock:
         room.subscribers.append(q)
         initial_payload = json.dumps(room.serialize())
@@ -703,10 +1628,14 @@ def stream_room(room_code: str):
             while True:
                 try:
                     msg = q.get(timeout=20)
+                    if msg == "__CLOSE_REPLACED_BY_SAME_IP__":
+                        yield f'data: {json.dumps({"replaced_by_same_ip": True})}\n\n'
+                        break
                     yield f"data: {msg}\n\n"
                 except queue.Empty:
                     yield ": keepalive\n\n"
         finally:
+            SECURITY.unregister_room_sse(ip, q)
             with room.lock:
                 if q in room.subscribers:
                     room.subscribers.remove(q)
@@ -717,6 +1646,46 @@ def stream_room(room_code: str):
         "X-Accel-Buffering": "no",
     }
     return Response(event_stream(), headers=headers)
+
+
+@app.route("/api/bug-report", methods=["POST"])
+def submit_bug_report():
+    ip = get_client_ip()
+    if not SECURITY.check_rate_limit(ip, "bug_report", max_calls=5, window_sec=300):
+        return jsonify({"error": "Has enviado demasiados reportes recientemente. Intenta en unos minutos."}), 429
+
+    data = request.get_json(silent=True) or {}
+    category = sanitize_text(data.get("category"), max_len=40, default="general")
+    description = sanitize_text(data.get("description"), max_len=800, default="")
+    contact = sanitize_text(data.get("contact"), max_len=80, default="")
+    context_info = sanitize_text(data.get("context"), max_len=400, default="")
+    player_name = sanitize_text(data.get("player_name"), max_len=24, default="Anónimo")
+
+    if len(description) < 5:
+        return jsonify({"error": "Por favor escribe una descripción de al menos 5 caracteres."}), 400
+
+    report_entry = {
+        "id": secrets.token_hex(4).upper(),
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "ip": ip,
+        "player_name": player_name,
+        "category": category,
+        "description": description,
+        "contact": contact,
+        "context": context_info,
+    }
+
+    # En Vercel Serverless el sistema de archivos raíz es read-only; usamos /tmp y emitimos a stdout para vercel logs
+    print(f"[BUG_REPORT] {json.dumps(report_entry, ensure_ascii=False)}", flush=True)
+    base_dir = "/tmp" if os.environ.get("VERCEL") else os.path.dirname(os.path.abspath(__file__))
+    reports_path = os.path.join(base_dir, "bug_reports.jsonl")
+    try:
+        with open(reports_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(report_entry, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+    return jsonify({"ok": True, "report_id": report_entry["id"]})
 
 
 if __name__ == "__main__":

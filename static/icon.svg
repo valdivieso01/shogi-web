@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="komaGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#faebd0"/>
+      <stop offset="100%" stop-color="#dfb15b"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="24" fill="#181411"/>
+  <polygon points="64,10 114,32 106,116 22,116 14,32" fill="url(#komaGrad)" stroke="#8c5f26" stroke-width="5"/>
+  <text x="64" y="86" font-family="serif" font-size="62" font-weight="900" text-anchor="middle" fill="#1a1007">王</text>
+</svg>

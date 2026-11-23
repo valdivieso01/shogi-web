@@ -3,8 +3,88 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Shōgi Online (将棋) · Ajedrez Japonés para 2 Jugadores</title>
-  <link rel="stylesheet" href="/static/styles.css">
+  <title>Shōgi Online (将棋) | Jugar Ajedrez Japonés Gratis para 2 Jugadores y Academia</title>
+  <meta name="description" content="Juega al Shōgi (Ajedrez Tradicional Japonés) online gratis en tiempo real para 2 jugadores. Incluye Lobby de Matchmaking, salas con código, motor oficial de reglas (Drops, Nifu, Promoción) y Academia interactiva de 12 lecciones en español.">
+  <meta name="keywords" content="shogi online, jugar shogi gratis, ajedrez japones online, shogi 2 jugadores, aprender a jugar shogi, reglas del shogi en español, tablero shogi, shogi matchmaking, dojo shogi, piezas de shogi">
+  <meta name="author" content="Javier Valdivieso">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+  <meta name="google-adsense-account" content="ca-pub-4665232577336299">
+  <link rel="canonical" href="/">
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.json">
+
+  <!-- OpenGraph / Facebook / WhatsApp / Discord -->
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_AR">
+  <meta property="og:site_name" content="Shōgi Dojo Online (将棋)">
+  <meta property="og:title" content="王 Shōgi Online (将棋) | Ajedrez Japonés para 2 Jugadores y Academia">
+  <meta property="og:description" content="Desafía a un amigo o busca rival en el Lobby en tiempo real, o aprende desde cero en nuestra Academia interactiva de 12 lecciones en español.">
+
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="王 Shōgi Online (将棋) | Ajedrez Japonés para 2 Jugadores">
+  <meta name="twitter:description" content="Partidas online en tiempo real, Lobby de Matchmaking y Academia interactiva de 12 lecciones en español.">
+
+  <link rel="stylesheet" href="/static/styles.css?v=9">
+
+  <!-- Datos Estructurados JSON-LD (Schema.org WebApplication + FAQPage) para indexado en Google -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Shōgi Dojo Online (将棋)",
+        "applicationCategory": "GameApplication",
+        "genre": "Board Game, Strategy, Japanese Chess",
+        "inLanguage": "es",
+        "operatingSystem": "All",
+        "author": {
+          "@type": "Person",
+          "name": "Javier Valdivieso"
+        },
+        "description": "Plataforma web gratuita para jugar al Shōgi (Ajedrez Tradicional Japonés) online en tiempo real para 2 jugadores con Lobby de Matchmaking y curso interactivo de 12 lecciones.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "¿Cómo se juega al Shōgi (Ajedrez Japonés) online para 2 jugadores?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "En Shōgi Dojo Online puedes usar el botón de Emparejamiento Rápido (Matchmaking) para encontrar un rival automáticamente, unirte a una sala pública abierta en el Lobby o crear una sala privada y compartir el enlace con un amigo para jugar en tiempo real desde cualquier dispositivo."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Cuál es la principal diferencia entre el Shōgi y el ajedrez occidental?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Se juega en un tablero de 9x9 casillas con fichas pentagonales llamadas Koma. La regla más distintiva es la Reincorporación (Drop o Uchi): las piezas que capturas al oponente pasan a tu reserva (Komadai) y en tu turno puedes volver a colocarlas en el tablero como parte de tu propio ejército."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Qué son las reglas de Nifu y Uchifuzume en el Shōgi?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Nifu (Dos Peones) prohíbe reincorporar un peón de la reserva en una columna donde ya tengas otro peón propio sin promocionar. Uchifuzume prohíbe dar jaque mate inmediato soltando un peón desde la reserva, aunque sí es válido dar jaque mate moviendo un peón que ya estaba en el tablero."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4665232577336299" crossorigin="anonymous"></script>
 </head>
 <body>
   <header class="topbar">
@@ -12,12 +92,15 @@
       <span class="brand-koma" aria-hidden="true">王</span>
       <div>
         <h1>Shōgi <span lang="ja">将棋</span></h1>
-        <p class="subtitle">Ajedrez Tradicional Japonés · 2 Jugadores en Tiempo Real</p>
+        <p class="subtitle">Dojo Online · Matchmaking y Salas en Tiempo Real</p>
       </div>
     </div>
 
     <div class="room-bar" id="room-bar">
-      <div class="room-pill">
+      <button type="button" class="btn" id="btn-back-lobby" hidden>
+        ← Volver al Lobby
+      </button>
+      <div class="room-pill" id="room-pill" hidden>
         <span class="status-dot" id="conn-dot" aria-hidden="true"></span>
         <span class="room-label">Sala:</span>
         <code id="room-code-display">---</code>
@@ -26,170 +109,367 @@
       <button type="button" class="btn btn-accent" id="btn-copy-link" hidden>
         Copiar link de invitación
       </button>
-      <button type="button" class="btn" id="btn-open-lobby">
-        Salas / Partida
-      </button>
-      <button type="button" class="btn" id="btn-flip-board">
+      <button type="button" class="btn" id="btn-flip-board" hidden>
         Girar tablero
+      </button>
+      <button type="button" class="btn btn-accent" id="btn-start-tutorial-top">
+        🎓 Aprender a Jugar
+      </button>
+      <button type="button" class="btn" id="btn-open-create-modal">
+        + Crear Sala
       </button>
       <button type="button" class="btn" id="btn-open-rules">
         Glosario y Reglas
       </button>
+      <button type="button" class="btn btn-danger" id="btn-open-bug-report">
+        🐞 Reportar Error
+      </button>
     </div>
   </header>
 
-  <main class="arena">
-    <!-- Columna Izquierda: Reserva Superior (Rival) + Estado -->
-    <aside class="side-panel side-left" aria-label="Panel del jugador superior y reserva">
-      <section class="player-card" id="top-player-card">
-        <div class="player-header">
-          <span class="player-symbol" id="top-player-symbol" aria-hidden="true">☖</span>
-          <div class="player-meta">
-            <h2 id="top-player-title">Gote · Blanco</h2>
-            <p class="player-name" id="top-player-name">Esperando jugador...</p>
-          </div>
-          <span class="turn-tag" id="top-turn-tag" hidden>Su turno</span>
-        </div>
-        <div class="komadai" id="top-komadai" aria-label="Piezas capturadas del jugador superior">
-          <p class="komadai-title">Piezas en mano (Komadai)</p>
-          <div class="komadai-grid" id="top-hand-grid"></div>
-        </div>
-      </section>
-
-      <section class="match-card" aria-labelledby="match-status-heading">
-        <h2 id="match-status-heading">Estado de la Partida</h2>
-        <div class="turn-banner" id="turn-banner" role="status" aria-live="polite">
-          Crea o únete a una sala para comenzar.
-        </div>
-        <div class="check-alert" id="check-alert" role="alert" hidden>
-          ¡Jaque al Rey (<span lang="ja">王手</span> - Ōte)!
-        </div>
-        <div class="invite-callout" id="invite-callout" hidden>
-          <p>Comparte este enlace o código con el 2.º jugador para jugar desde otro dispositivo o pestaña:</p>
-          <div class="invite-row">
-            <input type="text" id="invite-url-input" readonly aria-label="Enlace de invitación a la sala">
-            <button type="button" class="btn btn-accent" id="btn-copy-inline">Copiar</button>
+  <main>
+    <!-- VISTA 1: LOBBY PRINCIPAL DE MATCHMAKING Y SALAS -->
+    <section class="lobby-page" id="lobby-view" aria-label="Lobby principal de emparejamiento y salas">
+      <div class="lobby-hero">
+        <div class="hero-profile">
+          <label class="field-label" for="lobby-nickname">Tu nombre de jugador en el Dojo</label>
+          <div class="profile-input-row">
+            <input type="text" id="lobby-nickname" class="text-input" placeholder="Ej. Kenshin" maxlength="24" autocomplete="nickname">
+            <span class="online-pill">
+              <span class="status-dot online" aria-hidden="true"></span>
+              <span id="online-count-label">1 en el lobby</span>
+            </span>
           </div>
         </div>
-        <div class="match-actions">
-          <button type="button" class="btn" id="btn-reset-game">Reiniciar tablero</button>
-          <button type="button" class="btn btn-danger" id="btn-resign-game">Rendirse</button>
-        </div>
-      </section>
-    </aside>
 
-    <!-- Centro: Tablero Shōgiban 9x9 -->
-    <section class="board-stage" aria-label="Tablero de Shōgi 9 por 9">
-      <div class="shogiban-frame">
-        <div class="col-coords" id="col-coords" aria-hidden="true"></div>
-        <div class="board-with-rows">
-          <div class=" board-grid" id="shogi-board" role="grid" aria-label="Cuadrícula 9x9 de Shōgi"></div>
-          <div class="row-coords" id="row-coords" aria-hidden="true"></div>
+        <div class="matchmake-card" id="matchmake-card">
+          <div class="matchmake-info">
+            <h2>Emparejamiento Rápido (<span lang="ja">対局</span>)</h2>
+            <p id="matchmake-status-text">
+              Busca a otro jugador en cola y comienza una partida automáticamente con asignación de bandos.
+            </p>
+          </div>
+          <div class="matchmake-actions">
+            <span class="queue-badge" id="queue-count-badge">0 buscando rival</span>
+            <button type="button" class="btn btn-primary btn-lg" id="btn-quick-match">
+              ⚔️ Buscar Rival Ahora
+            </button>
+            <button type="button" class="btn btn-danger btn-lg" id="btn-cancel-match" hidden>
+              Cancelar búsqueda
+            </button>
+            <button type="button" class="btn btn-accent btn-lg" id="btn-play-ai-quick">
+              🤖 Jugar vs Bot (1J)
+            </button>
+          </div>
         </div>
       </div>
-      <p class="board-hint" id="board-hint">
-        Selecciona una pieza de tu bando para ver sus movimientos legales, o haz clic en una pieza capturada de tu reserva para reincorporarla.
-      </p>
+
+      <!-- SECCIÓN NUEVA: ACADEMIA DE SHŌGI (CURSO INTERACTIVO COMPLETO DE 12 LECCIONES) -->
+      <section class="tutorial-banner-card" aria-labelledby="tutorial-lobby-heading">
+        <div class="tutorial-banner-info">
+          <span class="tutorial-tag">🎓 Academia Interactiva Completa · 12 Lecciones con Diagramas</span>
+          <h2 id="tutorial-lobby-heading">Curso Paso a Paso: Cómo Mueve Cada Pieza, Reglas y Tácticas</h2>
+          <p>
+            Aprende desde cero con diagramas visuales de movimiento (brújula de casillas) y práctica en el tablero:
+            <strong>Rey</strong>, <strong>General de Oro</strong>, <strong>General de Plata</strong>, <strong>Peón y Tokin</strong>, <strong>Lancero</strong>, <strong>Caballo</strong>, <strong>Alfil y Caballo Dragón</strong>, <strong>Torre y Dragón</strong>, <strong>Reincorporaciones (Drops)</strong>, prohibiciones (<strong>Nifu y Uchifuzume</strong>), <strong>Defensa de Jaque</strong> y <strong>Jaque Mate</strong>.
+          </p>
+          <div class="tutorial-chapters-pills" id="tutorial-chapters-pills">
+            <button type="button" class="chapter-pill" data-step="0">1. El Rey (王 · K)</button>
+            <button type="button" class="chapter-pill" data-step="1">2. General de Oro (金 · G)</button>
+            <button type="button" class="chapter-pill" data-step="2">3. General de Plata (銀 · S)</button>
+            <button type="button" class="chapter-pill" data-step="3">4. Peón y Tokin (歩 → と)</button>
+            <button type="button" class="chapter-pill" data-step="4">5. El Lancero (香 · L)</button>
+            <button type="button" class="chapter-pill" data-step="5">6. El Caballo (桂 · N)</button>
+            <button type="button" class="chapter-pill" data-step="6">7. Alfil y C.Dragón (角 → 馬)</button>
+            <button type="button" class="chapter-pill" data-step="7">8. Torre y Dragón (飛 → 龍)</button>
+            <button type="button" class="chapter-pill" data-step="8">9. Reincorporar (Drops)</button>
+            <button type="button" class="chapter-pill" data-step="9">10. Reglas Nifu y Uchifuzume</button>
+            <button type="button" class="chapter-pill" data-step="10">11. Defender un Jaque</button>
+            <button type="button" class="chapter-pill" data-step="11">12. Jaque Mate (Atama-kin)</button>
+          </div>
+        </div>
+        <div class="tutorial-banner-cta">
+          <button type="button" class="btn btn-primary btn-lg" id="btn-start-tutorial-hero">
+            🎓 Empezar Curso desde Lección 1
+          </button>
+        </div>
+      </section>
+
+      <div class="lobby-columns">
+        <!-- Salas Públicas Esperando Jugador -->
+        <section class="lobby-panel" aria-labelledby="open-rooms-heading">
+          <div class="panel-header">
+            <h2 id="open-rooms-heading">Salas Abiertas Esperando Rival</h2>
+            <button type="button" class="btn btn-accent" id="btn-create-public-quick">
+              + Nueva Sala Pública
+            </button>
+          </div>
+          <div class="rooms-list" id="open-rooms-list" aria-live="polite">
+            <p class="empty-state">No hay salas esperando jugador. ¡Crea una o usa Buscar Rival!</p>
+          </div>
+        </section>
+
+        <!-- Partidas en Curso + Unirse por Código + Jugadores en Línea -->
+        <div class="lobby-side-stack">
+          <section class="lobby-panel" aria-labelledby="join-by-code-heading">
+            <h2 id="join-by-code-heading">Unirse con Código Privado</h2>
+            <div class="code-join-row">
+              <input type="text" id="direct-code-input" class="text-input code-input" placeholder="CÓDIGO (6 LETRAS)" maxlength="6" aria-label="Código de sala de 6 caracteres">
+              <button type="button" class="btn btn-accent" id="btn-direct-join">Entrar</button>
+            </div>
+            <p class="dialog-error" id="direct-join-error" role="alert" hidden></p>
+          </section>
+
+          <section class="lobby-panel" aria-labelledby="live-rooms-heading">
+            <div class="panel-header">
+              <h2 id="live-rooms-heading">Partidas en Vivo (Espectador)</h2>
+            </div>
+            <div class="rooms-list compact-list" id="live-rooms-list" aria-live="polite">
+              <p class="empty-state">No hay partidas en curso en este momento.</p>
+            </div>
+          </section>
+
+          <section class="lobby-panel" aria-labelledby="online-players-heading">
+            <div class="panel-header">
+              <h2 id="online-players-heading">Jugadores en el Lobby</h2>
+            </div>
+            <ul class="players-online-list" id="online-players-list" aria-live="polite"></ul>
+          </section>
+        </div>
+      </div>
+
+      <!-- Sección Editorial / SEO para Indexado en Google y Google AdSense -->
+      <section class="seo-editorial-section" aria-labelledby="seo-guide-heading">
+        <h2 id="seo-guide-heading">¿Qué es el Shōgi (<span lang="ja">将棋</span>) y cómo funciona el Ajedrez Japonés?</h2>
+        <div class="seo-editorial-grid">
+          <article class="seo-article-card">
+            <h3>🏯 El Tablero 9×9 y las Fichas Pentagonales (Koma)</h3>
+            <p>
+              El <strong>Shōgi</strong>, conocido en Japón como el <em>Juego de los Generales</em>, se disputa sobre un tablero rectangular de 9 filas por 9 columnas (<em>Shōgiban</em>). A diferencia del ajedrez occidental, todas las piezas tienen el mismo color de madera: la pertenencia a cada jugador —<strong>Sente (☗ Negro, quien mueve primero)</strong> o <strong>Gote (☖ Blanco)</strong>— se identifica por la dirección hacia la que apunta la punta de cada ficha pentagonal.
+            </p>
+          </article>
+          <article class="seo-article-card">
+            <h3>🔄 La Regla de Reincorporación (Drops / <span lang="ja">打ち</span>)</h3>
+            <p>
+              La característica estratégica que hace único al Shōgi en todo el mundo es que <strong>las piezas capturadas nunca mueren</strong>. Cuando capturas una ficha del adversario, esta pierde su promoción, pasa a tu soporte lateral (<em>Komadai</em>) y en cualquiera de tus turnos posteriores puedes gastarlo para <strong>reincorporarla en una casilla vacía</strong> como parte de tu propio ejército.
+            </p>
+          </article>
+          <article class="seo-article-card">
+            <h3>⚡ Zona de Promoción (<span lang="ja">成り</span>) y Reglas Especiales</h3>
+            <p>
+              Las 3 filas más alejadas de cada jugador conforman la <strong>zona de promoción</strong>. Al entrar, moverse o salir de ella, los Peones, Lanceros, Caballos y Generales de Plata pueden promocionar para mover como un <strong>General de Oro</strong>, mientras que la Torre se corona en <strong>Rey Dragón (<span lang="ja">龍</span>)</strong> y el Alfil en <strong>Caballo Dragón (<span lang="ja">馬</span>)</strong>. El motor valida además las prohibiciones oficiales de <em>Nifu</em> (dos peones en la misma columna) y <em>Uchifuzume</em>.
+            </p>
+          </article>
+        </div>
+      </section>
     </section>
 
-    <!-- Columna Derecha: Reserva Inferior (Jugador Activo) + Historial -->
-    <aside class="side-panel side-right" aria-label="Panel del jugador inferior e historial">
-      <section class="player-card player-card-active" id="bottom-player-card">
-        <div class="player-header">
-          <span class="player-symbol" id="bottom-player-symbol" aria-hidden="true">☗</span>
-          <div class="player-meta">
-            <h2 id="bottom-player-title">Sente · Negro</h2>
-            <p class="player-name" id="bottom-player-name">Esperando jugador...</p>
+    <!-- VISTA 2: ARENA DE JUEGO (TABLERO 9x9) -->
+    <div class="arena" id="game-view" hidden>
+      <!-- Columna Izquierda: Reserva Superior (Rival) + Estado -->
+      <aside class="side-panel side-left" aria-label="Panel del jugador superior y reserva">
+        <section class="player-card" id="top-player-card">
+          <div class="player-header">
+            <span class="player-symbol" id="top-player-symbol" aria-hidden="true">☖</span>
+            <div class="player-meta">
+              <h2 id="top-player-title">Gote · Blanco</h2>
+              <p class="player-name" id="top-player-name">Esperando jugador...</p>
+            </div>
+            <span class="turn-tag" id="top-turn-tag" hidden>Su turno</span>
           </div>
-          <span class="turn-tag" id="bottom-turn-tag" hidden>Tu turno</span>
+          <div class="komadai" id="top-komadai" aria-label="Piezas capturadas del jugador superior">
+            <p class="komadai-title">Piezas en mano (Komadai)</p>
+            <div class="komadai-grid" id="top-hand-grid"></div>
+          </div>
+        </section>
+
+        <section class="match-card" aria-labelledby="match-status-heading">
+          <h2 id="match-status-heading">Estado de la Partida</h2>
+          <div class="turn-banner" id="turn-banner" role="status" aria-live="polite">
+            Cargando partida...
+          </div>
+          <div class="check-alert" id="check-alert" role="alert" hidden>
+            ¡Jaque al Rey (<span lang="ja">王手</span> - Ōte)!
+          </div>
+          <div class="invite-callout" id="invite-callout" hidden>
+            <p>Esperando a tu oponente. Comparte este enlace o espera a que alguien se una desde el Lobby:</p>
+            <div class="invite-row">
+              <input type="text" id="invite-url-input" readonly aria-label="Enlace de invitación a la sala">
+              <button type="button" class="btn btn-accent" id="btn-copy-inline">Copiar</button>
+            </div>
+          </div>
+          <div class="match-actions">
+            <button type="button" class="btn" id="btn-reset-game">Reiniciar tablero</button>
+            <button type="button" class="btn btn-danger" id="btn-resign-game">Rendirse</button>
+          </div>
+        </section>
+      </aside>
+
+      <!-- Centro: Tablero Shōgiban 9x9 (+ Panel del Sensei en Modo Tutorial) -->
+      <section class="board-stage" aria-label="Tablero de Shōgi 9 por 9">
+        <article class="sensei-panel" id="sensei-panel" aria-live="polite" hidden>
+          <div class="sensei-header">
+            <span class="sensei-badge" id="sensei-step-badge">Lección 1 de 12</span>
+            <h2 id="sensei-title">El Rey (王 · K)</h2>
+            <select id="sensei-jump-select" class="sensei-select" aria-label="Cambiar de lección"></select>
+            <div class="sensei-progress" aria-hidden="true">
+              <div class="sensei-progress-fill" id="sensei-progress-fill" style="--progress: 8%;"></div>
+            </div>
+          </div>
+
+          <div class="sensei-body-grid">
+            <div class="sensei-explanation">
+              <div class="sensei-lesson-text" id="sensei-text"></div>
+              <ul class="sensei-key-points" id="sensei-key-points"></ul>
+            </div>
+            <div class="sensei-diagrams" id="sensei-diagrams" aria-label="Diagrama de movimiento de la pieza"></div>
+          </div>
+
+          <p class="sensei-objective" id="sensei-objective"></p>
+          <div class="sensei-controls">
+            <button type="button" class="btn" id="btn-tut-prev">← Lección anterior</button>
+            <button type="button" class="btn" id="btn-tut-retry">Reiniciar ejercicio</button>
+            <button type="button" class="btn btn-primary" id="btn-tut-next">Siguiente lección →</button>
+          </div>
+        </article>
+
+        <div class="shogiban-frame">
+          <div class="col-coords" id="col-coords" aria-hidden="true"></div>
+          <div class="board-with-rows">
+            <div class="board-grid" id="shogi-board" role="grid" aria-label="Cuadrícula 9x9 de Shōgi"></div>
+            <div class="row-coords" id="row-coords" aria-hidden="true"></div>
+          </div>
         </div>
-        <div class="komadai" id="bottom-komadai" aria-label="Piezas capturadas del jugador inferior">
-          <p class="komadai-title">Piezas en mano (clic para reincorporar)</p>
-          <div class="komadai-grid" id="bottom-hand-grid"></div>
-        </div>
+        <p class="board-hint" id="board-hint">
+          Selecciona una pieza de tu bando para ver sus movimientos legales, o haz clic en una pieza capturada de tu reserva para reincorporarla.
+        </p>
       </section>
 
-      <section class="history-card" aria-labelledby="history-heading">
-        <div class="history-header">
-          <h2 id="history-heading">Registro de Jugadas</h2>
-          <span class="move-counter" id="move-counter">0 jugadas</span>
-        </div>
-        <ol class="history-list" id="history-list" aria-live="polite"></ol>
-      </section>
-    </aside>
+      <!-- Columna Derecha: Reserva Inferior (Jugador Activo) + Historial -->
+      <aside class="side-panel side-right" aria-label="Panel del jugador inferior e historial">
+        <section class="player-card player-card-active" id="bottom-player-card">
+          <div class="player-header">
+            <span class="player-symbol" id="bottom-player-symbol" aria-hidden="true">☗</span>
+            <div class="player-meta">
+              <h2 id="bottom-player-title">Sente · Negro</h2>
+              <p class="player-name" id="bottom-player-name">Esperando jugador...</p>
+            </div>
+            <span class="turn-tag" id="bottom-turn-tag" hidden>Tu turno</span>
+          </div>
+          <div class="komadai" id="bottom-komadai" aria-label="Piezas capturadas del jugador inferior">
+            <p class="komadai-title">Piezas en mano (clic para reincorporar)</p>
+            <div class="komadai-grid" id="bottom-hand-grid"></div>
+          </div>
+        </section>
+
+        <section class="history-card" aria-labelledby="history-heading">
+          <div class="history-header">
+            <h2 id="history-heading">Registro de Jugadas</h2>
+            <span class="move-counter" id="move-counter">0 jugadas</span>
+          </div>
+          <ol class="history-list" id="history-list" aria-live="polite"></ol>
+        </section>
+      </aside>
+    </div>
   </main>
 
-  <footer class="footer">
-    <p>Motor de reglas en Python (<code>Tablero</code>, <code>Jugador</code>, <code>Pieza</code>) con sincronización online en tiempo real · Reglas oficiales de Nifu, Uchifuzume, Drops y Promociones.</p>
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="site-footer-top">
+        <div class="site-footer-brand">
+          <div class="site-footer-logo">
+            <span class="footer-koma-icon" aria-hidden="true">王</span>
+            <span>Shōgi Dojo Online (<span lang="ja">将棋</span>)</span>
+          </div>
+          <p>
+            Plataforma web comunitaria e independiente para jugar al Shōgi (Ajedrez Tradicional Japonés) online en tiempo real para 2 jugadores, con motor de reglas oficiales en Python, Lobby de Matchmaking y Academia interactiva paso a paso en español.
+          </p>
+        </div>
+
+        <nav class="site-footer-nav" aria-label="Enlaces legales y de información">
+          <a href="/sobre-nosotros">Sobre Nosotros &amp; Contacto</a>
+          <a href="/politica-de-privacidad">Política de Privacidad</a>
+          <a href="/terminos-de-servicio">Términos de Servicio</a>
+          <a href="/sitemap.xml">Sitemap XML</a>
+          <button type="button" class="footer-link-btn" id="btn-open-bug-footer">🐞 Reportar Error</button>
+        </nav>
+      </div>
+
+      <div class="site-footer-bottom">
+        <p>
+          © 2026 Shōgi Dojo Online. Creado y mantenido con dedicación por <strong>Javier Valdivieso</strong> (Mendoza, Argentina).
+        </p>
+        <p>
+          Motor en Python (<code>Tablero</code>, <code>Jugador</code>, <code>Pieza</code>) bajo Licencia MIT · <a href="https://github.com/valdivieso01/shogi-web" target="_blank" rel="noopener noreferrer">GitHub: valdivieso01/shogi-web</a>
+        </p>
+      </div>
+    </div>
   </footer>
 
-  <!-- Modal Nativo: Crear o Unirse a Sala Online / Local -->
+  <!-- Modal Nativo: Configurar y Crear Sala -->
   <dialog id="lobby-dialog" aria-labelledby="lobby-dialog-title" closedby="any">
     <div class="dialog-box">
       <div class="dialog-header">
-        <h1 id="lobby-dialog-title">Sala de Juego · 2 Jugadores</h1>
+        <h1 id="lobby-dialog-title">Crear Nueva Sala de Shōgi</h1>
         <form method="dialog">
-          <button value="close" class="btn-icon" aria-label="Cerrar ventana de salas">✕</button>
+          <button value="close" class="btn-icon" aria-label="Cerrar ventana de creación">✕</button>
         </form>
       </div>
 
-      <div class="lobby-grid">
-        <section class="lobby-section" aria-labelledby="create-room-heading">
-          <h2 id="create-room-heading">Crear Nueva Partida</h2>
-          <label class="field-label" for="player-name-create">Tu nombre</label>
-          <input type="text" id="player-name-create" class="text-input" placeholder="Ej. Jugador 1" maxlength="24" autocomplete="nickname" autofocus>
+      <div class="create-form">
+        <label class="field-label" for="room-title-create">Nombre de la sala (opcional)</label>
+        <input type="text" id="room-title-create" class="text-input" placeholder="Ej. Dojo Principiantes" maxlength="36" autofocus>
 
-          <fieldset class="choice-fieldset">
-            <legend>Modo de juego</legend>
-            <label class="radio-card">
-              <input type="radio" name="game-mode" value="online" checked>
-              <span>
-                <strong>Online en Tiempo Real (Link / Código)</strong>
-                <small>Cada jugador desde su propio dispositivo o navegador.</small>
-              </span>
+        <fieldset class="choice-fieldset">
+          <legend>Modo y visibilidad</legend>
+          <label class="radio-card">
+            <input type="radio" name="game-mode" value="online-public" checked>
+            <span>
+              <strong>Sala Online Pública (Visible en el Lobby)</strong>
+              <small>Cualquier jugador en el Lobby podrá unirse con un clic.</small>
+            </span>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="game-mode" value="online-private">
+            <span>
+              <strong>Sala Online Privada (Solo con Código / Link)</strong>
+              <small>No aparece en la lista pública; invita con el enlace directo.</small>
+            </span>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="game-mode" value="ai">
+            <span>
+              <strong>1 Jugador contra Sensei Bot 🤖 (IA)</strong>
+              <small>Practica una partida completa en solitario contra el bot del Dojo.</small>
+            </span>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="game-mode" value="local">
+            <span>
+              <strong>2 Jugadores en este Dispositivo</strong>
+              <small>Turnos compartidos en la misma pantalla.</small>
+            </span>
+          </label>
+        </fieldset>
+
+        <fieldset class="choice-fieldset" id="color-choice-group">
+          <legend>Elige tu bando inicial</legend>
+          <div class="radio-inline">
+            <label class="radio-pill">
+              <input type="radio" name="creator-color" value="negro" checked>
+              <span>☗ Sente (Negro · Empieza)</span>
             </label>
-            <label class="radio-card">
-              <input type="radio" name="game-mode" value="local">
-              <span>
-                <strong>2 Jugadores en este Dispositivo</strong>
-                <small>Turnos compartidos en la misma pantalla sin esperar conexión.</small>
-              </span>
+            <label class="radio-pill">
+              <input type="radio" name="creator-color" value="blanco">
+              <span>☖ Gote (Blanco · 2.º turno)</span>
             </label>
-          </fieldset>
+          </div>
+        </fieldset>
 
-          <fieldset class="choice-fieldset" id="color-choice-group">
-            <legend>Elige tu bando inicial</legend>
-            <div class="radio-inline">
-              <label class="radio-pill">
-                <input type="radio" name="creator-color" value="negro" checked>
-                <span>☗ Sente (Negro · Empieza)</span>
-              </label>
-              <label class="radio-pill">
-                <input type="radio" name="creator-color" value="blanco">
-                <span>☖ Gote (Blanco · 2.º turno)</span>
-              </label>
-            </div>
-          </fieldset>
-
-          <button type="button" class="btn btn-primary btn-block" id="btn-create-room">
-            Crear Sala y Empezar
-          </button>
-        </section>
-
-        <section class="lobby-section" aria-labelledby="join-room-heading">
-          <h2 id="join-room-heading">Unirse con Código de Sala</h2>
-          <p class="section-desc">Si tu rival ya creó una sala online, introduce el código de 6 caracteres:</p>
-          <label class="field-label" for="player-name-join">Tu nombre</label>
-          <input type="text" id="player-name-join" class="text-input" placeholder="Ej. Jugador 2" maxlength="24" autocomplete="nickname">
-
-          <label class="field-label" for="join-code-input">Código de sala</label>
-          <input type="text" id="join-code-input" class="text-input code-input" placeholder="EJ: A7K9M2" maxlength="6">
-
-          <button type="button" class="btn btn-accent btn-block" id="btn-join-room">
-            Unirse a la Sala
-          </button>
-          <p class="dialog-error" id="lobby-error" role="alert" hidden></p>
-        </section>
+        <button type="button" class="btn btn-primary btn-block" id="btn-create-room">
+          Crear Sala y Entrar
+        </button>
+        <p class="dialog-error" id="lobby-error" role="alert" hidden></p>
       </div>
     </div>
   </dialog>
@@ -280,7 +560,7 @@
         <section class="rules-notes" aria-labelledby="special-rules-heading">
           <h2 id="special-rules-heading">Reglas Especiales Implementadas</h2>
           <ul>
-            <li><strong> orientación en el tablero:</strong> En Shōgi las fichas no se distinguen por color de madera, sino por la dirección a la que apunta su punta pentagonal. <strong>Sente (Negro ☗)</strong> apunta hacia arriba (filas 8 → 0) y <strong>Gote (Blanco ☖)</strong> hacia abajo (filas 0 → 8).</li>
+            <li><strong>Orientación en el tablero:</strong> En Shōgi las fichas no se distinguen por color de madera, sino por la dirección a la que apunta su punta pentagonal. <strong>Sente (Negro ☗)</strong> apunta hacia arriba (filas 8 → 0) y <strong>Gote (Blanco ☖)</strong> hacia abajo (filas 0 → 8).</li>
             <li><strong>Reincorporación (Drops / <span lang="ja">打ち</span>):</strong> Las piezas capturadas pierden su promoción, pasan a tu <em>Komadai</em> (reserva) y en tu turno puedes colocarlas en cualquier casilla vacía.</li>
             <li><strong>Nifu (<span lang="ja">二歩</span> - Dos Peones):</strong> No puedes reincorporar un peón en una columna donde ya tengas otro peón sin promocionar.</li>
             <li><strong>Uchifuzume (<span lang="ja">打ち歩詰め</span>):</strong> No está permitido reincorporar un peón de la reserva dando jaque mate inmediato; sí puedes dar jaque mate moviendo un peón que ya estaba en el tablero.</li>
@@ -291,6 +571,55 @@
     </div>
   </dialog>
 
-  <script src="/static/app.js" defer></script>
+  <!-- Modal Nativo: Reportar Error / Bug -->
+  <dialog id="bug-dialog" aria-labelledby="bug-dialog-title" closedby="any">
+    <div class="dialog-box">
+      <div class="dialog-header">
+        <h1 id="bug-dialog-title">🐞 Reportar Error o Sugerencia</h1>
+        <form method="dialog">
+          <button value="close" class="btn-icon" aria-label="Cerrar ventana de reporte">✕</button>
+        </form>
+      </div>
+
+      <form id="bug-report-form" class="create-form" novalidate>
+        <label class="field-label" for="bug-category">Categoría del problema</label>
+        <select id="bug-category" class="text-input">
+          <option value="Regla de Shogi / Movimiento">Regla de Shōgi / Movimiento de pieza</option>
+          <option value="Tutorial / Academia">Tutorial / Academia de 12 lecciones</option>
+          <option value="Visual / Interfaz">Visual / Tamaño o diseño del tablero</option>
+          <option value="Lobby / Matchmaking">Lobby / Matchmaking / Conexión</option>
+          <option value="Otro / Sugerencia">Otro / Sugerencia de mejora</option>
+        </select>
+
+        <label class="field-label" for="bug-context">Contexto detectado automáticamente</label>
+        <input type="text" id="bug-context" class="text-input" readonly>
+
+        <label class="field-label" for="bug-description">¿Qué ocurrió o qué deberíamos corregir?</label>
+        <textarea id="bug-description" class="text-input bug-textarea" rows="4" maxlength="800" placeholder="Describe brevemente el error (ej: En la lección 4 intenté mover el peón a tal casilla y...)" required autofocus></textarea>
+
+        <label class="field-label" for="bug-contact">Tu correo o usuario (opcional, por si quieres respuesta)</label>
+        <input type="email" id="bug-contact" class="text-input" placeholder="opcional@correo.com" maxlength="80" autocomplete="email" inputmode="email">
+
+        <div class="bug-actions-stack">
+          <button type="submit" class="btn btn-primary btn-block" id="btn-submit-bug">
+            Enviar Reporte al Dojo
+          </button>
+          <div class="bug-external-links">
+            <a href="https://github.com/valdivieso01/shogi-web/issues/new" target="_blank" rel="noopener noreferrer" class="btn btn-accent" id="link-github-issue">
+              Abrir Issue en GitHub ↗
+            </a>
+            <a href="mailto:hjavier.valdivieso@outlook.es" class="btn" id="link-mailto-bug">
+              Enviar por Email ✉
+            </a>
+          </div>
+        </div>
+
+        <p class="dialog-error" id="bug-error" role="alert" hidden></p>
+        <p class="bug-success" id="bug-success" role="status" hidden></p>
+      </form>
+    </div>
+  </dialog>
+
+  <script src="/static/app.js?v=10" defer></script>
 </body>
 </html>
