@@ -139,6 +139,206 @@
 
   const KANJI_NUMS = ["一", "二", "三", "四", "五", "六", "七", "八", "九"];
 
+  /* ==========================================
+     SINTETIZADOR ZEN JAPONÉS (KOTO & AMBIENT + SONIDO KOMA)
+     ========================================== */
+  const zenAudio = (() => {
+    let ctx = null;
+    let masterGain = null;
+    let droneOsc1 = null;
+    let droneOsc2 = null;
+    let droneGain = null;
+    let timerId = null;
+    let isPlaying = false;
+    let volume = Number(localStorage.getItem("shogi_music_vol") ?? 45) / 100;
+
+    // Escala pentatónica japonesa Hirajōshi / Yo en Re (D3 a A5)
+    const KOTO_FREQS = [
+      146.83, // D3
+      164.81, // E3
+      174.61, // F3
+      220.0,  // A3
+      246.94, // B3
+      293.66, // D4
+      329.63, // E4
+      349.23, // F4
+      440.0,  // A4
+      493.88, // B4
+      587.33, // D5
+      659.25, // E5
+    ];
+
+    function ensureContext() {
+      if (!ctx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return null;
+        ctx = new AudioCtx();
+        masterGain = ctx.createGain();
+        masterGain.gain.value = volume * 0.35;
+        masterGain.connect(ctx.destination);
+      }
+      if (ctx.state === "suspended") {
+        ctx.resume();
+      }
+      return ctx;
+    }
+
+    function playKotoPluck(freq, delaySec = 0, duration = 3.4) {
+      if (!isPlaying || !ctx) return;
+      const now = ctx.currentTime + delaySec;
+
+      const osc = ctx.createOscillator();
+      const subOsc = ctx.createOscillator();
+      const filter = ctx.createBiquadFilter();
+      const noteGain = ctx.createGain();
+
+      // Timbre suave de cuerda pulsada (Koto japonés)
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, now);
+      // Ligero vibrato/bend tradicional de Koto al pulsar
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.006, now + 0.08);
+      osc.frequency.exponentialRampToValueAtTime(freq, now + 0.35);
+
+      subOsc.type = "sine";
+      subOsc.frequency.setValueAtTime(freq * 0.5, now);
+
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(freq * 3.2, now);
+      filter.frequency.exponentialRampToValueAtTime(freq * 1.1, now + duration);
+
+      noteGain.gain.setValueAtTime(0.0001, now);
+      noteGain.gain.linearRampToValueAtTime(0.28, now + 0.025);
+      noteGain.gain.exponentialRampToValueAtTime(0.0008, now + duration);
+
+      osc.connect(filter);
+      subOsc.connect(filter);
+      filter.connect(noteGain);
+      noteGain.connect(masterGain);
+
+      osc.start(now);
+      subOsc.start(now);
+      osc.stop(now + duration + 0.05);
+      subOsc.stop(now + duration + 0.05);
+    }
+
+    function startDrone() {
+      if (!ctx || droneOsc1) return;
+      const now = ctx.currentTime;
+      droneOsc1 = ctx.createOscillator();
+      droneOsc2 = ctx.createOscillator();
+      droneGain = ctx.createGain();
+
+      droneOsc1.type = "sine";
+      droneOsc1.frequency.setValueAtTime(73.42, now); // D2
+      droneOsc2.type = "sine";
+      droneOsc2.frequency.setValueAtTime(110.0, now); // A2 (quinta justa)
+
+      droneGain.gain.setValueAtTime(0.001, now);
+      droneGain.gain.linearRampToValueAtTime(0.11, now + 2.5);
+
+      droneOsc1.connect(droneGain);
+      droneOsc2.connect(droneGain);
+      droneGain.connect(masterGain);
+
+      droneOsc1.start(now);
+      droneOsc2.start(now);
+    }
+
+    function stopDrone() {
+      if (droneOsc1 && ctx) {
+        try {
+          droneOsc1.stop();
+          droneOsc2.stop();
+        } catch (_) {}
+      }
+      droneOsc1 = null;
+      droneOsc2 = null;
+      droneGain = null;
+    }
+
+    function scheduleNextPhrase() {
+      if (!isPlaying) return;
+      const f1 = KOTO_FREQS[Math.floor(Math.random() * KOTO_FREQS.length)];
+      playKotoPluck(f1, 0, 3.8);
+
+      // A veces toca un arpegio suave de 2 o 3 notas
+      if (Math.random() < 0.65) {
+        const f2 = KOTO_FREQS[Math.floor(Math.random() * KOTO_FREQS.length)];
+        playKotoPluck(f2, 0.55 + Math.random() * 0.35, 3.5);
+      }
+      if (Math.random() < 0.35) {
+        const f3 = KOTO_FREQS[Math.floor(Math.random() * KOTO_FREQS.length)];
+        playKotoPluck(f3, 1.35 + Math.random() * 0.4, 4.0);
+      }
+
+      const nextIntervalMs = 2400 + Math.random() * 1800;
+      timerId = setTimeout(scheduleNextPhrase, nextIntervalMs);
+    }
+
+    function start() {
+      if (isPlaying) return;
+      if (!ensureContext()) return;
+      isPlaying = true;
+      startDrone();
+      scheduleNextPhrase();
+      localStorage.setItem("shogi_music_on", "1");
+    }
+
+    function stop() {
+      isPlaying = false;
+      if (timerId) {
+        clearTimeout(timerId);
+        timerId = null;
+      }
+      stopDrone();
+      localStorage.setItem("shogi_music_on", "0");
+    }
+
+    function toggle() {
+      if (isPlaying) {
+        stop();
+      } else {
+        start();
+      }
+      return isPlaying;
+    }
+
+    function setVolume(percent) {
+      volume = Math.max(0, Math.min(100, Number(percent))) / 100;
+      localStorage.setItem("shogi_music_vol", String(Math.round(volume * 100)));
+      if (masterGain && ctx) {
+        masterGain.gain.setTargetAtTime(volume * 0.35, ctx.currentTime, 0.05);
+      }
+    }
+
+    // Efecto sutil de madera ('Pachi') al apoyar una ficha en el Shōgiban
+    function playWoodClick() {
+      if (!isPlaying || !ctx || volume <= 0.02) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const clickGain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(95, now + 0.045);
+
+      clickGain.gain.setValueAtTime(0.35, now);
+      clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+      osc.connect(clickGain);
+      clickGain.connect(masterGain);
+      osc.start(now);
+      osc.stop(now + 0.055);
+    }
+
+    return {
+      toggle,
+      setVolume,
+      playWoodClick,
+      getVolumePercent: () => Math.round(volume * 100),
+      isPlaying: () => isPlaying,
+    };
+  })();
+
   function escapeHTML(str) {
     return String(str ?? "")
       .replace(/&/g, "&amp;")
@@ -1362,6 +1562,7 @@
     });
     const data = await res.json();
     if (res.ok && data.state) {
+      zenAudio.playWoodClick();
       clearSelection();
       state.game = data.state;
       renderGameAll();
@@ -1380,6 +1581,7 @@
     });
     const data = await res.json();
     if (res.ok && data.state) {
+      zenAudio.playWoodClick();
       clearSelection();
       state.game = data.state;
       renderGameAll();
@@ -1662,6 +1864,7 @@
   }
 
   function completeTutorialLesson(lesson) {
+    zenAudio.playWoodClick();
     state.tutorialCompletedStep = true;
     const givesCheckToBlanco = [5, 8, 11].includes(state.tutorialStep);
     state.game.in_check = givesCheckToBlanco ? "blanco" : null;
@@ -1926,6 +2129,35 @@
     state.flipped = !state.flipped;
     renderGameAll();
   });
+
+  // Controles de Música Relajante Zen
+  const btnToggleMusic = document.getElementById("btn-toggle-music");
+  const musicVolumeInput = document.getElementById("music-volume");
+  const audioPill = btnToggleMusic ? btnToggleMusic.closest(".audio-control-pill") : null;
+
+  function syncAudioUI() {
+    if (!btnToggleMusic) return;
+    const active = zenAudio.isPlaying();
+    btnToggleMusic.setAttribute("aria-pressed", active ? "true" : "false");
+    btnToggleMusic.textContent = active ? "🎵 Música Zen: ON" : "🎵 Música Zen: OFF";
+    if (audioPill) {
+      audioPill.classList.toggle("playing", active);
+    }
+  }
+
+  if (musicVolumeInput) {
+    musicVolumeInput.value = String(zenAudio.getVolumePercent());
+    musicVolumeInput.addEventListener("input", (e) => {
+      zenAudio.setVolume(e.target.value);
+    });
+  }
+
+  if (btnToggleMusic) {
+    btnToggleMusic.addEventListener("click", () => {
+      zenAudio.toggle();
+      syncAudioUI();
+    });
+  }
 
   document.getElementById("btn-create-room").addEventListener("click", () => createNewRoom());
 

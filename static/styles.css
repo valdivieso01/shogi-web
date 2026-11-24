@@ -144,6 +144,46 @@ body {
   font-weight: 600;
 }
 
+/* Control de Música Zen Relajante (WCAG 1.4.2 Audio Control) */
+.audio-control-pill {
+  display: inline-flex;
+  align-items: safe center;
+  gap: 0.45rem;
+  padding-block: 0.25rem;
+  padding-inline: 0.45rem 0.65rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+}
+
+.audio-control-pill.playing {
+  border-color: #39d98a;
+  box-shadow: 0 0 10px rgba(57, 217, 138, 0.22);
+}
+
+.btn-audio-toggle {
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.2rem 0.4rem;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.audio-control-pill.playing .btn-audio-toggle {
+  color: #6ee7b7;
+}
+
+.music-volume-slider {
+  inline-size: 4.2rem;
+  accent-color: var(--accent-gold);
+  cursor: pointer;
+}
+
 /* ==========================================
    VISTA 1: LOBBY DE EMPAREJAMIENTO Y SALAS
    ========================================== */

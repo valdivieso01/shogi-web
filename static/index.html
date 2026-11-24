@@ -25,7 +25,7 @@
   <meta name="twitter:title" content="王 Shōgi Online (将棋) | Ajedrez Japonés para 2 Jugadores">
   <meta name="twitter:description" content="Partidas online en tiempo real, Lobby de Matchmaking y Academia interactiva de 12 lecciones en español.">
 
-  <link rel="stylesheet" href="/static/styles.css?v=9">
+  <link rel="stylesheet" href="/static/styles.css?v=13">
 
   <!-- Datos Estructurados JSON-LD (Schema.org WebApplication + FAQPage) para indexado en Google -->
   <script type="application/ld+json">
@@ -115,6 +115,20 @@
       <button type="button" class="btn btn-accent" id="btn-start-tutorial-top">
         🎓 Aprender a Jugar
       </button>
+      <div class="audio-control-pill" role="group" aria-label="Control de música relajante del Dojo">
+        <button type="button" class="btn-audio-toggle" id="btn-toggle-music" aria-pressed="false">
+          🎵 Música Zen: OFF
+        </button>
+        <input
+          type="range"
+          id="music-volume"
+          class="music-volume-slider"
+          min="0"
+          max="100"
+          value="45"
+          aria-label="Volumen de la música relajante"
+        >
+      </div>
       <button type="button" class="btn" id="btn-open-create-modal">
         + Crear Sala
       </button>
@@ -620,6 +634,6 @@
     </div>
   </dialog>
 
-  <script src="/static/app.js?v=12" defer></script>
+  <script src="/static/app.js?v=13" defer></script>
 </body>
 </html>
