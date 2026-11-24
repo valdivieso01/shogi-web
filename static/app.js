@@ -2139,7 +2139,7 @@
     if (!btnToggleMusic) return;
     const active = zenAudio.isPlaying();
     btnToggleMusic.setAttribute("aria-pressed", active ? "true" : "false");
-    btnToggleMusic.textContent = active ? "🎵 Música Zen: ON" : "🎵 Música Zen: OFF";
+    btnToggleMusic.textContent = active ? "🎵 Música: ON" : "🎵 Música: OFF";
     if (audioPill) {
       audioPill.classList.toggle("playing", active);
     }
