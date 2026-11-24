@@ -53,6 +53,10 @@
     lobbyData: null,
     lobbySource: null,
 
+    authToken: localStorage.getItem("shogi_auth_token") || null,
+    authUser: null,
+    googleClientId: null,
+
     roomCode: null,
     playerToken: null,
     myColor: null, // "negro" | "blanco" | "ambos" | "espectador"
@@ -126,6 +130,16 @@
   const bugDialog = document.getElementById("bug-dialog");
   const promotePreview = document.getElementById("promote-preview");
   const lobbyError = document.getElementById("lobby-error");
+
+  // Auth y Ranking
+  const btnGoogleLogin = document.getElementById("btn-google-login");
+  const userProfileWidget = document.getElementById("user-profile-widget");
+  const userAvatarTop = document.getElementById("user-avatar-top");
+  const userNameTop = document.getElementById("user-name-top");
+  const userRatingTop = document.getElementById("user-rating-top");
+  const btnLogout = document.getElementById("btn-logout");
+  const leaderboardTbody = document.getElementById("leaderboard-tbody");
+  const recentMatchesList = document.getElementById("recent-matches-list");
 
   const bugForm = document.getElementById("bug-report-form");
   const bugCategory = document.getElementById("bug-category");
@@ -1181,6 +1195,7 @@
       body: JSON.stringify({
         player_id: state.playerId,
         name: getNickname(),
+        auth_token: state.authToken,
       }),
     });
     const data = await res.json();
@@ -1712,6 +1727,7 @@
 
     switchView("lobby");
     connectLobbyStream();
+    loadCommunityStats();
   }
 
   /* ==========================================
@@ -1970,7 +1986,7 @@
     const res = await fetch("/api/rooms", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode, visibility, color, name, title }),
+      body: JSON.stringify({ mode, visibility, color, name, title, auth_token: state.authToken }),
     });
     const data = await res.json();
     if (res.ok) {
@@ -1998,6 +2014,7 @@
         name: name || getNickname(),
         player_token: existingToken,
         spectate,
+        auth_token: state.authToken,
       }),
     });
     const data = await res.json();
@@ -2294,12 +2311,249 @@
       if (state.lobbyData) {
         renderLobby();
       }
+      loadCommunityStats();
     }
   });
+
+  /* ==========================================
+     AUTENTICACIÓN GOOGLE Y PERFIL DE USUARIO
+     ========================================== */
+  async function checkAuthStatus() {
+    if (!state.authToken) {
+      updateAuthUI(null);
+      return;
+    }
+    try {
+      const res = await fetch("/api/auth/me", {
+        headers: { Authorization: `Bearer ${state.authToken}` },
+      });
+      const data = await res.json();
+      if (data.authenticated && data.user) {
+        state.authUser = data.user;
+        updateAuthUI(data.user);
+        if (data.user.name && !loadNickname()) {
+          lobbyNicknameInput.value = data.user.name;
+          saveNickname(data.user.name);
+        }
+      } else {
+        state.authUser = null;
+        state.authToken = null;
+        localStorage.removeItem("shogi_auth_token");
+        updateAuthUI(null);
+      }
+    } catch (_) {
+      updateAuthUI(null);
+    }
+  }
+
+  function updateAuthUI(user) {
+    if (user) {
+      if (btnGoogleLogin) btnGoogleLogin.hidden = true;
+      if (userProfileWidget) {
+        userProfileWidget.hidden = false;
+        userAvatarTop.src = user.picture || "/static/icon-48.png";
+        userNameTop.textContent = user.name;
+        userRatingTop.textContent = `${user.rating || 1200} pts`;
+      }
+    } else {
+      if (btnGoogleLogin) btnGoogleLogin.hidden = false;
+      if (userProfileWidget) userProfileWidget.hidden = true;
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${state.authToken}` },
+      });
+    } catch (_) {}
+    state.authToken = null;
+    state.authUser = null;
+    localStorage.removeItem("shogi_auth_token");
+    updateAuthUI(null);
+    loadCommunityStats();
+  }
+
+  async function handleGoogleCredential(credential) {
+    try {
+      const res = await fetch("/api/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential }),
+      });
+      const data = await res.json();
+      if (data.ok && data.user) {
+        state.authToken = data.token;
+        state.authUser = data.user;
+        localStorage.setItem("shogi_auth_token", data.token);
+        updateAuthUI(data.user);
+        if (data.user.name) {
+          lobbyNicknameInput.value = data.user.name;
+          saveNickname(data.user.name);
+        }
+        loadCommunityStats();
+      } else {
+        alert(data.error || "Error al autenticar con Google.");
+      }
+    } catch (_) {
+      alert("Error de conexión al autenticar con Google.");
+    }
+  }
+
+  async function initGoogleAuth() {
+    if (btnLogout) {
+      btnLogout.addEventListener("click", handleLogout);
+    }
+    try {
+      const res = await fetch("/api/auth/config");
+      const cfg = await res.json();
+      state.googleClientId = cfg.google_client_id;
+    } catch (_) {}
+
+    if (btnGoogleLogin) {
+      btnGoogleLogin.addEventListener("click", () => {
+        if (state.googleClientId && window.google && window.google.accounts && window.google.accounts.id) {
+          window.google.accounts.id.prompt();
+        } else if (!state.googleClientId) {
+          const isEn = window.i18n && window.i18n.getLanguage() === "en";
+          alert(
+            isEn
+              ? "Google Sign-In is enabled! To connect live Google accounts, configure GOOGLE_CLIENT_ID in your Vercel project environment variables."
+              : "¡El sistema de Google Sign-In está activo! Para conectar cuentas reales de Google, agrega GOOGLE_CLIENT_ID en las variables de entorno de tu proyecto en Vercel."
+          );
+        }
+      });
+    }
+
+    if (state.googleClientId && window.google && window.google.accounts && window.google.accounts.id) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: state.googleClientId,
+          callback: (response) => {
+            if (response.credential) {
+              handleGoogleCredential(response.credential);
+            }
+          },
+        });
+        if (!state.authToken) {
+          window.google.accounts.id.prompt();
+        }
+      } catch (_) {}
+    }
+  }
+
+  /* ==========================================
+     SALÓN DE LA FAMA Y HISTORIAL DE PARTIDAS
+     ========================================== */
+  async function loadCommunityStats() {
+    if (!leaderboardTbody && !recentMatchesList) return;
+    const isEn = window.i18n && window.i18n.getLanguage() === "en";
+
+    // 1. Leaderboard
+    try {
+      const res = await fetch("/api/leaderboard?limit=15");
+      const data = await res.json();
+      const players = data.leaderboard || [];
+      if (players.length === 0) {
+        leaderboardTbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="empty-state">
+              ${isEn
+                ? "No rated matches yet. Sign in with Google, play a match, and lead the Hall of Fame!"
+                : "Aún no hay partidas puntuadas. ¡Inicia sesión con Google, juega una partida y lidera el Salón de la Fama!"}
+            </td>
+          </tr>
+        `;
+      } else {
+        leaderboardTbody.innerHTML = players
+          .map((p, idx) => {
+            let rankBadge = `${idx + 1}`;
+            let rankClass = "";
+            if (idx === 0) {
+              rankBadge = "🥇 1";
+              rankClass = "rank-1";
+            } else if (idx === 1) {
+              rankBadge = "🥈 2";
+              rankClass = "rank-2";
+            } else if (idx === 2) {
+              rankBadge = "🥉 3";
+              rankClass = "rank-3";
+            }
+            const avatarSrc = p.picture || "/static/icon-48.png";
+            return `
+              <tr>
+                <td><span class="rank-badge ${rankClass}">${rankBadge}</span></td>
+                <td>
+                  <div class="leaderboard-player-cell">
+                    <img src="${escapeHTML(avatarSrc)}" alt="" class="leaderboard-avatar" width="24" height="24" onerror="this.src='/static/icon-48.png'">
+                    <span>${escapeHTML(p.name)}</span>
+                  </div>
+                </td>
+                <td class="text-right"><strong>${p.rating}</strong></td>
+                <td class="text-right">${p.wins} / ${p.losses}</td>
+                <td class="text-right">${p.win_rate}%</td>
+              </tr>
+            `;
+          })
+          .join("");
+      }
+    } catch (_) {}
+
+    // 2. Recent Matches
+    try {
+      const res = await fetch("/api/matches/recent?limit=10");
+      const data = await res.json();
+      const matches = data.matches || [];
+      if (matches.length === 0) {
+        recentMatchesList.innerHTML = `<p class="empty-state">${
+          isEn ? "No matches recorded recently." : "No hay partidas registradas recientemente."
+        }</p>`;
+      } else {
+        recentMatchesList.innerHTML = matches
+          .map((m) => {
+            const senteWinner = m.winner_color === "negro";
+            const goteWinner = m.winner_color === "blanco";
+            let reasonLabel = "Victoria";
+            if (m.end_reason === "checkmate") {
+              reasonLabel = isEn ? "Checkmate" : "Jaque Mate";
+            } else if (m.end_reason === "resignation") {
+              reasonLabel = isEn ? "Resignation" : "Rendición";
+            } else if (m.winner_color === "tablas") {
+              reasonLabel = isEn ? "Draw" : "Tablas";
+            }
+            return `
+              <div class="match-item-card">
+                <div class="match-players">
+                  <div class="match-player-line ${senteWinner ? "winner" : ""}">
+                    <span>☗</span>
+                    <span>${escapeHTML(m.sente_name)}</span>
+                    ${senteWinner ? "🏆" : ""}
+                  </div>
+                  <div class="match-player-line ${goteWinner ? "winner" : ""}">
+                    <span>☖</span>
+                    <span>${escapeHTML(m.gote_name)}</span>
+                    ${goteWinner ? "🏆" : ""}
+                  </div>
+                </div>
+                <div class="match-meta-right">
+                  <span class="match-reason-badge">${reasonLabel}</span>
+                  <span>${m.move_count} ${isEn ? "moves" : "jugadas"}</span>
+                </div>
+              </div>
+            `;
+          })
+          .join("");
+      }
+    } catch (_) {}
+  }
 
   // Inicialización: si hay ?room=CODIGO entra a la partida; si no, abre el Lobby de Matchmaking
   async function init() {
     renderCoordinates();
+    checkAuthStatus();
+    initGoogleAuth();
+    loadCommunityStats();
     const params = new URLSearchParams(window.location.search);
     const roomParam = params.get("room");
     if (roomParam) {
@@ -2309,6 +2563,7 @@
     }
     switchView("lobby");
     connectLobbyStream();
+    loadCommunityStats();
   }
 
   init();

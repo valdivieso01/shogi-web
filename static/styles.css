@@ -1826,3 +1826,237 @@ dialog::backdrop {
     max-inline-size: 640px;
   }
 }
+
+/* ==========================================
+   USUARIO Y GOOGLE AUTH EN TOPBAR
+   ========================================== */
+.user-auth-pill {
+  display: flex;
+  align-items: center;
+}
+
+.btn-auth {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #231b14;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-auth:hover {
+  background: #31251b;
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.google-icon {
+  flex-shrink: 0;
+}
+
+.user-profile-widget {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #231b14;
+  border: 1px solid var(--accent-gold);
+  padding: 0.2rem 0.55rem 0.2rem 0.25rem;
+  border-radius: 999px;
+}
+
+.user-avatar-top {
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--accent-gold);
+}
+
+.user-meta-top {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.user-name-top {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-rating-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  font-family: ui-monospace, monospace;
+}
+
+.btn-logout {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 0.2rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+}
+
+.btn-logout:hover {
+  color: #f87171;
+}
+
+/* ==========================================
+   SALÓN DE LA FAMA & HISTORIAL DE PARTIDAS
+   ========================================== */
+.community-stats-section {
+  margin-block-start: 1.8rem;
+  margin-block-end: 2rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 900px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stats-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 1.2rem;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38);
+}
+
+.badge-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: rgba(223, 177, 91, 0.15);
+  color: var(--accent-gold);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(223, 177, 91, 0.3);
+}
+
+.leaderboard-table-wrap {
+  overflow-x: auto;
+  margin-top: 0.8rem;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.leaderboard-table th {
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.leaderboard-table td {
+  padding: 0.55rem 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.leaderboard-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.leaderboard-player-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.leaderboard-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border-subtle);
+}
+
+.rank-badge {
+  font-weight: 700;
+  display: inline-block;
+  min-width: 22px;
+  text-align: center;
+}
+
+.rank-1 { color: #ffd700; font-size: 1.05rem; }
+.rank-2 { color: #c0c0c0; font-size: 1.05rem; }
+.rank-3 { color: #cd7f32; font-size: 1.05rem; }
+
+.recent-matches-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.match-item-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.55rem 0.8rem;
+  background: #15110e;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  font-size: 0.84rem;
+}
+
+.match-players {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.match-player-line {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.match-player-line.winner {
+  color: var(--accent-gold);
+  font-weight: 700;
+}
+
+.match-meta-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.match-reason-badge {
+  font-size: 0.68rem;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}

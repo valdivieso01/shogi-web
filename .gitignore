@@ -9,3 +9,5 @@ ENV/
 .vercel/
 bug_reports.jsonl
 *.log
+*.db
+shogi.db

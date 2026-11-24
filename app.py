@@ -8,17 +8,34 @@ import re
 import secrets
 import threading
 import time
+import urllib.request
 import uuid
 from collections import defaultdict, deque
 from flask import Flask, Response, jsonify, request, send_from_directory
 
+import database
 from jugador import Jugador
 from piezas import Alfil, Caballo, GeneralOro, GeneralPlata, Lancero, Peon, Rey, Torre
 from tablero import Tablero
 
+database.init_db()
+
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 # Límite máximo de payload HTTP (16 KB) contra ataques de agotamiento de memoria
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
+
+AUTH_SESSIONS = {}  # token -> user_dict
+
+
+def get_authenticated_user(req, token: str | None = None) -> dict | None:
+    auth_header = req.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+    if not token:
+        token = req.args.get("auth_token") or req.cookies.get("shogi_auth_token")
+    if token and token in AUTH_SESSIONS:
+        return AUTH_SESSIONS[token]
+    return None
 
 # ==========================================
 # SEGURIDAD: IP, RATE LIMITING Y SANITIZACIÓN
@@ -249,6 +266,30 @@ class GameRoom:
         self.last_move = None
         self.history = []
         self.move_count = 0
+        self._recorded_in_db = False
+
+    def finalize_match_record(self):
+        if getattr(self, "_recorded_in_db", False) or not self.winner:
+            return
+        self._recorded_in_db = True
+        sente_user = self.players.get("negro", {}).get("user")
+        gote_user = self.players.get("blanco", {}).get("user")
+        sente_name = self.players.get("negro", {}).get("name", "Sente")
+        gote_name = self.players.get("blanco", {}).get("name", "Gote")
+        end_reason = "checkmate" if "Jaque Mate" in (self.reason or "") else ("resignation" if "rendido" in (self.reason or "") else "normal")
+        try:
+            database.record_match(
+                room_code=self.code,
+                sente_user=sente_user,
+                gote_user=gote_user,
+                sente_name=sente_name,
+                gote_name=gote_name,
+                winner_color=self.winner,
+                end_reason=end_reason,
+                move_count=self.move_count,
+            )
+        except Exception as e:
+            print(f"[DB Error] finalize_match_record {self.code}: {e}")
 
     def get_jugador(self, color: str) -> Jugador:
         return self.j_negro if color == "negro" else self.j_blanco
@@ -340,6 +381,7 @@ class GameRoom:
                 self.reason = f"¡Jaque Mate! Victoria para {'Sente (Negro ☗)' if mover_color == 'negro' else 'Gote (Blanco ☖)'}."
             else:
                 self.reason = f"Sin jugadas legales para {'Negro' if defender_color == 'negro' else 'Blanco'}. Victoria para {'Negro' if mover_color == 'negro' else 'Blanco'}."
+            self.finalize_match_record()
         else:
             self.turn = defender_color
 
@@ -1332,6 +1374,110 @@ def page_terminos():
     )
 
 
+# ==========================================
+# RUTAS DE AUTENTICACIÓN GOOGLE Y RANKING
+# ==========================================
+@app.route("/api/auth/config", methods=["GET"])
+def auth_config():
+    return jsonify({
+        "google_client_id": os.environ.get("GOOGLE_CLIENT_ID", "").strip()
+    })
+
+
+@app.route("/api/auth/google", methods=["POST"])
+def auth_google():
+    ip = get_client_ip()
+    if not SECURITY.check_rate_limit(ip, "auth_google", max_calls=15, window_sec=60):
+        return jsonify({"error": "Demasiados intentos de autenticación. Espera un minuto."}), 429
+
+    data = request.get_json(silent=True) or {}
+    credential = data.get("credential")
+    if not credential:
+        return jsonify({"error": "Falta el token de credencial de Google."}), 400
+
+    google_id = None
+    email = None
+    name = "Jugador"
+    picture = ""
+
+    # 1. Validar directamente con el endpoint oficial de Google Tokeninfo
+    try:
+        req = urllib.request.Request(
+            f"https://oauth2.googleapis.com/tokeninfo?id_token={credential}",
+            headers={"User-Agent": "DojoShogiOnline/1.0"}
+        )
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            info = json.loads(resp.read().decode("utf-8"))
+            google_id = info.get("sub")
+            email = info.get("email")
+            name = info.get("name") or info.get("given_name") or "Jugador"
+            picture = info.get("picture", "")
+    except Exception as e1:
+        # Fallback con google-auth si está disponible
+        try:
+            from google.oauth2 import id_token
+            from google.auth.transport import requests as google_requests
+            idinfo = id_token.verify_oauth2_token(credential, google_requests.Request())
+            google_id = idinfo.get("sub")
+            email = idinfo.get("email")
+            name = idinfo.get("name") or idinfo.get("given_name") or "Jugador"
+            picture = idinfo.get("picture", "")
+        except Exception:
+            return jsonify({"error": f"No se pudo validar el token de Google: {e1}"}), 401
+
+    if not google_id:
+        return jsonify({"error": "Token de Google inválido."}), 401
+
+    user = database.upsert_user(google_id, email or "", name, picture)
+    token = secrets.token_hex(24)
+    AUTH_SESSIONS[token] = user
+
+    response = jsonify({"ok": True, "token": token, "user": user})
+    response.set_cookie("shogi_auth_token", token, max_age=30 * 86400, httponly=True, samesite="Lax")
+    return response
+
+
+@app.route("/api/auth/me", methods=["GET"])
+def auth_me():
+    user = get_authenticated_user(request)
+    if user:
+        refreshed = database.get_user_by_id(user["id"])
+        if refreshed:
+            user = refreshed
+            # Update memory session
+            token = request.headers.get("Authorization", "").replace("Bearer ", "").strip() or request.cookies.get("shogi_auth_token")
+            if token:
+                AUTH_SESSIONS[token] = user
+        return jsonify({"authenticated": True, "user": user})
+    return jsonify({"authenticated": False, "user": None})
+
+
+@app.route("/api/auth/logout", methods=["POST"])
+def auth_logout():
+    token = request.headers.get("Authorization", "").replace("Bearer ", "").strip()
+    if not token:
+        token = request.cookies.get("shogi_auth_token")
+    if token and token in AUTH_SESSIONS:
+        del AUTH_SESSIONS[token]
+    resp = jsonify({"ok": True})
+    resp.delete_cookie("shogi_auth_token")
+    return resp
+
+
+@app.route("/api/leaderboard", methods=["GET"])
+def api_leaderboard():
+    limit = min(50, max(5, int(request.args.get("limit", 15))))
+    data = database.get_leaderboard(limit=limit)
+    return jsonify({"leaderboard": data})
+
+
+@app.route("/api/matches/recent", methods=["GET"])
+def api_recent_matches():
+    limit = min(30, max(5, int(request.args.get("limit", 10))))
+    data = database.get_recent_matches(limit=limit)
+    return jsonify({"matches": data})
+
+
 @app.route("/api/lobby", methods=["GET"])
 def get_lobby():
     ip = get_client_ip()
@@ -1352,8 +1498,15 @@ def lobby_matchmake():
 
     data = request.get_json(silent=True) or {}
     raw_pid = (data.get("player_id") or "").strip()
+    auth_user = get_authenticated_user(request, data.get("auth_token"))
     name = sanitize_text(data.get("name"), max_len=24)
+    if auth_user and auth_user.get("name") and (not name or name.startswith("Samurai-")):
+        name = auth_user["name"]
     player_id = LOBBY.touch_player(raw_pid, name, ip)
+    if auth_user:
+        with LOBBY.lock:
+            if player_id in LOBBY.players:
+                LOBBY.players[player_id]["user"] = auth_user
 
     with LOBBY.lock:
         LOBBY.players[player_id]["match"] = None
@@ -1393,12 +1546,14 @@ def lobby_matchmake():
                     "name": opponent["name"],
                     "connected": True,
                     "ip": opponent.get("ip"),
+                    "user": opponent.get("user"),
                 }
                 room.players[my_color] = {
                     "token": my_token,
                     "name": me["name"],
                     "connected": True,
                     "ip": ip,
+                    "user": me.get("user"),
                 }
                 ROOMS[code] = room
 
@@ -1516,10 +1671,16 @@ def create_room():
     preferred_color = data.get("color", "negro")
     if preferred_color not in ("negro", "blanco"):
         preferred_color = "negro"
+    auth_user = get_authenticated_user(request, data.get("auth_token"))
+    default_player_name = (
+        auth_user["name"]
+        if auth_user and auth_user.get("name")
+        else ("Sente (Negro)" if preferred_color == "negro" else "Gote (Blanco)")
+    )
     player_name = sanitize_text(
         data.get("name"),
         max_len=24,
-        default="Sente (Negro)" if preferred_color == "negro" else "Gote (Blanco)",
+        default=default_player_name,
     )
     room_title = sanitize_text(data.get("title"), max_len=36, default=f"Sala de {player_name}")
 
@@ -1539,15 +1700,15 @@ def create_room():
         room = GameRoom(code=code, mode=mode, visibility=visibility, title=room_title, owner_ip=ip)
         token = secrets.token_urlsafe(24)
         if mode == "local":
-            room.players["negro"] = {"token": token, "name": "Jugador Negro (Sente)", "connected": True, "ip": ip}
-            room.players["blanco"] = {"token": token, "name": "Jugador Blanco (Gote)", "connected": True, "ip": ip}
+            room.players["negro"] = {"token": token, "name": "Jugador Negro (Sente)", "connected": True, "ip": ip, "user": auth_user}
+            room.players["blanco"] = {"token": token, "name": "Jugador Blanco (Gote)", "connected": True, "ip": ip, "user": None}
             assigned_color = "ambos"
         elif mode == "ai":
-            room.players["negro"] = {"token": token, "name": player_name, "connected": True, "ip": ip}
-            room.players["blanco"] = {"token": "AI_BOT", "name": "Sensei Bot 🤖", "connected": True, "ip": "AI"}
+            room.players["negro"] = {"token": token, "name": player_name, "connected": True, "ip": ip, "user": auth_user}
+            room.players["blanco"] = {"token": "AI_BOT", "name": "Sensei Bot 🤖", "connected": True, "ip": "AI", "user": None}
             assigned_color = "negro"
         else:
-            room.players[preferred_color] = {"token": token, "name": player_name, "connected": True, "ip": ip}
+            room.players[preferred_color] = {"token": token, "name": player_name, "connected": True, "ip": ip, "user": auth_user}
             assigned_color = preferred_color
         ROOMS[code] = room
 
@@ -1574,7 +1735,10 @@ def join_room(room_code: str):
 
     data = request.get_json(silent=True) or {}
     existing_token = data.get("player_token")
+    auth_user = get_authenticated_user(request, data.get("auth_token"))
     player_name = sanitize_text(data.get("name"), max_len=24)
+    if auth_user and auth_user.get("name") and (not player_name or player_name.startswith("Samurai-")):
+        player_name = auth_user["name"]
     as_spectator = bool(data.get("spectate", False))
 
     with room.lock:
@@ -1600,6 +1764,8 @@ def join_room(room_code: str):
             if token_matches:
                 if player_name:
                     room.players[color]["name"] = player_name
+                if auth_user:
+                    room.players[color]["user"] = auth_user
                 room.players[color]["connected"] = True
                 room.players[color]["ip"] = ip
                 room.broadcast()
@@ -1623,6 +1789,7 @@ def join_room(room_code: str):
                         "name": player_name or default_name,
                         "connected": True,
                         "ip": ip,
+                        "user": auth_user,
                     }
                     room.broadcast()
                     return jsonify(
@@ -1911,6 +2078,7 @@ def resign_room(room_code: str):
             f"{'Sente (Negro ☗)' if resigning_color == 'negro' else 'Gote (Blanco ☖)'} se ha rendido. "
             f"Victoria para {'Sente (Negro ☗)' if winner_color == 'negro' else 'Gote (Blanco ☖)'}."
         )
+        room.finalize_match_record()
         room.broadcast()
         return jsonify({"ok": True, "state": room.serialize()})
 

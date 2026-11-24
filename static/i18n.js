@@ -67,6 +67,21 @@
       no_live_rooms: "No hay partidas en curso en este momento.",
       online_players_heading: "Jugadores en el Lobby",
 
+      // Auth & Leaderboard
+      btn_login_google: "Iniciar con Google",
+      btn_logout: "Cerrar sesión",
+      leaderboard_title: "🏆 Salón de la Fama (Top Jugadores)",
+      leaderboard_tag: "Competitivo",
+      rank_col: "#",
+      player_col: "Jugador",
+      rating_col: "Rating",
+      victories_col: "V / D",
+      winrate_col: "Efectividad",
+      leaderboard_empty: "Aún no hay partidas puntuadas. ¡Inicia sesión con Google, juega una partida y lidera el Salón de la Fama!",
+      recent_matches_title: "📜 Últimas Partidas Disputadas",
+      matches_tag: "En Vivo",
+      recent_matches_empty: "No hay partidas registradas recientemente.",
+
       // SEO Editorial
       seo_heading: "¿Qué es el Shōgi (将棋) y cómo funciona el Ajedrez Japonés?",
       seo_art1_title: "🏯 El Tablero 9×9 y las Fichas Pentagonales (Koma)",
@@ -252,6 +267,21 @@
       live_rooms_heading: "Live Matches (Spectator)",
       no_live_rooms: "No active matches right now.",
       online_players_heading: "Players in Lobby",
+
+      // Auth & Leaderboard
+      btn_login_google: "Sign in with Google",
+      btn_logout: "Sign out",
+      leaderboard_title: "🏆 Hall of Fame (Leaderboard)",
+      leaderboard_tag: "Competitive",
+      rank_col: "#",
+      player_col: "Player",
+      rating_col: "Rating",
+      victories_col: "W / L",
+      winrate_col: "Win Rate",
+      leaderboard_empty: "No rated matches yet. Sign in with Google, play a match, and lead the Hall of Fame!",
+      recent_matches_title: "📜 Recent Matches Played",
+      matches_tag: "Live",
+      recent_matches_empty: "No matches recorded recently.",
 
       // SEO Editorial
       seo_heading: "What is Shōgi (将棋) and How Does Japanese Chess Work?",
