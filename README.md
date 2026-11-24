@@ -1,6 +1,6 @@
-# Shōgi Web (将棋) · Multijugador Online para 2 Jugadores ⚔️🏯
+# Dojo Shōgi Online (将棋) · https://www.dojoshogi.online ⚔️🏯
 
-Versión web multijugador en tiempo real del **Shōgi (Ajedrez Tradicional Japonés)** para 2 jugadores, construida con **Flask (Python)** reutilizando el motor orientado a objetos (`Tablero`, `Jugador`, `Pieza`) y un frontend moderno con fichas pentagonales tradicionales (*Koma*) y sincronización mediante Server-Sent Events (SSE).
+Plataforma web multijugador en tiempo real del **Shōgi (Ajedrez Tradicional Japonés)** para 2 jugadores, modo 1 Jugador vs IA (*Sensei Bot*) y Academia interactiva de 12 lecciones, desplegada en **https://www.dojoshogi.online** y construida con **Flask (Python)** reutilizando el motor orientado a objetos (`Tablero`, `Jugador`, `Pieza`).
 
 ---
 

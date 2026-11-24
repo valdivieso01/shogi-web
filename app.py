@@ -789,21 +789,22 @@ def manifest_json():
     return jsonify(manifest)
 
 
+SITE_URL = "https://www.dojoshogi.online"
+
+
 @app.route("/robots.txt")
 def robots_txt():
-    base_url = request.url_root.rstrip("/")
     lines = [
         "User-agent: *",
         "Allow: /",
         "Disallow: /api/",
-        f"Sitemap: {base_url}/sitemap.xml",
+        f"Sitemap: {SITE_URL}/sitemap.xml",
     ]
     return Response("\n".join(lines) + "\n", mimetype="text/plain")
 
 
 @app.route("/sitemap.xml")
 def sitemap_xml():
-    base_url = request.url_root.rstrip("/")
     today = time.strftime("%Y-%m-%d")
     pages = [
         ("/", "daily", "1.0"),
@@ -813,7 +814,7 @@ def sitemap_xml():
     ]
     urls_xml = "".join(
         f"""  <url>
-    <loc>{base_url}{path}</loc>
+    <loc>{SITE_URL}{path}</loc>
     <lastmod>{today}</lastmod>
     <changefreq>{freq}</changefreq>
     <priority>{prio}</priority>
@@ -826,20 +827,28 @@ def sitemap_xml():
     return Response(xml, mimetype="application/xml")
 
 
-def render_legal_page(title: str, description: str, body_html: str) -> Response:
+def render_legal_page(title: str, description: str, body_html: str, canonical_path: str = "/") -> Response:
     year = time.strftime("%Y")
+    canonical_url = f"{SITE_URL}{canonical_path}"
     html = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{title} | Shōgi Dojo Online (将棋)</title>
+  <title>{title} | Dojo Shōgi Online (将棋)</title>
   <meta name="description" content="{description}">
   <meta name="author" content="Javier Valdivieso">
   <meta name="robots" content="index, follow">
   <meta name="google-adsense-account" content="ca-pub-4665232577336299">
+  <link rel="canonical" href="{canonical_url}">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_AR">
+  <meta property="og:site_name" content="Dojo Shōgi Online (将棋)">
+  <meta property="og:title" content="{title} | Dojo Shōgi Online">
+  <meta property="og:description" content="{description}">
+  <meta property="og:url" content="{canonical_url}">
   <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/styles.css?v=6">
+  <link rel="stylesheet" href="/static/styles.css?v=15">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4665232577336299" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -936,8 +945,9 @@ def page_sobre_nosotros():
     """
     return render_legal_page(
         "Sobre Nosotros y Contacto",
-        "Conoce qué es Shōgi Dojo Online, la historia del proyecto de ajedrez japonés en español y cómo contactar con su creador Javier Valdivieso.",
+        "Conoce qué es Dojo Shōgi Online (dojoshogi.online), la historia del proyecto de ajedrez japonés en español y cómo contactar con su creador Javier Valdivieso.",
         body,
+        "/sobre-nosotros",
     )
 
 
@@ -950,7 +960,7 @@ def page_privacidad():
       <section class="legal-section">
         <h2>1. Información general</h2>
         <p>
-          En <strong>Shōgi Dojo Online (将棋)</strong>, la privacidad de nuestros visitantes y jugadores es de suma importancia. Este documento describe los tipos de información que se reciben y procesan al utilizar nuestra plataforma de juego y aprendizaje, así como el uso de cookies publicitarias conforme a los estándares de <strong>Google AdSense</strong>.
+          En <strong>Dojo Shōgi Online (将棋)</strong> (disponible en <a href="https://www.dojoshogi.online">https://www.dojoshogi.online</a>), la privacidad de nuestros visitantes y jugadores es de suma importancia. Este documento describe los tipos de información que se reciben y procesan al utilizar nuestra plataforma de juego y aprendizaje, así como el uso de cookies publicitarias conforme a los estándares de <strong>Google AdSense</strong>.
         </p>
       </section>
 
@@ -996,8 +1006,9 @@ def page_privacidad():
     """
     return render_legal_page(
         "Política de Privacidad",
-        "Política de privacidad, uso de cookies y configuración de Google AdSense de Shōgi Dojo Online.",
+        "Política de privacidad, uso de cookies y configuración de Google AdSense de Dojo Shōgi Online (dojoshogi.online).",
         body,
+        "/politica-de-privacidad",
     )
 
 
@@ -1010,7 +1021,7 @@ def page_terminos():
       <section class="legal-section">
         <h2>1. Naturaleza del servicio</h2>
         <p>
-          <strong>Shōgi Dojo Online</strong> es una plataforma educativa y recreativa gratuita que permite aprender y jugar al Shōgi (ajedrez tradicional japonés) en línea con otros usuarios o en modo local. Al acceder y utilizar el sitio, aceptas estos términos básicos de convivencia y uso.
+          <strong>Dojo Shōgi Online</strong> (<a href="https://www.dojoshogi.online">https://www.dojoshogi.online</a>) es una plataforma educativa y recreativa gratuita que permite aprender y jugar al Shōgi (ajedrez tradicional japonés) en línea con otros usuarios, contra el Bot del Dojo o en modo local. Al acceder y utilizar el sitio, aceptas estos términos básicos de convivencia y uso.
         </p>
       </section>
 
@@ -1042,8 +1053,9 @@ def page_terminos():
     """
     return render_legal_page(
         "Términos de Servicio",
-        "Términos y condiciones de uso del sitio web y Lobby multijugador Shōgi Dojo Online.",
+        "Términos y condiciones de uso del sitio web y Lobby multijugador Dojo Shōgi Online (dojoshogi.online).",
         body,
+        "/terminos-de-servicio",
     )
 
 
