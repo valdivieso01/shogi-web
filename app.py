@@ -765,25 +765,40 @@ def ads_txt():
 
 @app.route("/favicon.ico")
 def favicon():
-    return send_from_directory(app.static_folder, "icon.svg", mimetype="image/svg+xml")
+    return send_from_directory(app.static_folder, "favicon.ico", mimetype="image/x-icon")
 
 
 @app.route("/manifest.json")
 def manifest_json():
     manifest = {
-        "name": "Shōgi Dojo Online (将棋) - Ajedrez Japonés para 2 Jugadores",
-        "short_name": "Shōgi Online",
+        "name": "Dojo Shōgi Online (将棋)",
+        "short_name": "Dojo Shōgi",
         "description": "Juega Shōgi (Ajedrez Tradicional Japonés) online gratis en tiempo real para 2 jugadores con Lobby de Matchmaking y Academia interactiva.",
         "start_url": "/",
         "display": "standalone",
         "background_color": "#181411",
-        "theme_color": "#dfb15b",
+        "theme_color": "#181411",
         "icons": [
+            {
+                "src": "/static/icon-48.png",
+                "sizes": "48x48",
+                "type": "image/png",
+            },
+            {
+                "src": "/static/icon-192.png",
+                "sizes": "192x192",
+                "type": "image/png",
+            },
+            {
+                "src": "/static/icon-512.png",
+                "sizes": "512x512",
+                "type": "image/png",
+            },
             {
                 "src": "/static/icon.svg",
                 "sizes": "any",
                 "type": "image/svg+xml",
-            }
+            },
         ],
     }
     return jsonify(manifest)
@@ -847,7 +862,12 @@ def render_legal_page(title: str, description: str, body_html: str, canonical_pa
   <meta property="og:title" content="{title} | Dojo Shōgi Online">
   <meta property="og:description" content="{description}">
   <meta property="og:url" content="{canonical_url}">
+  <meta property="og:image" content="{SITE_URL}/static/og-image.png">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" href="/static/icon-48.png" type="image/png" sizes="48x48">
+  <link rel="icon" href="/static/icon-192.png" type="image/png" sizes="192x192">
   <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
   <link rel="stylesheet" href="/static/styles.css?v=15">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4665232577336299" crossorigin="anonymous"></script>
   <script>
