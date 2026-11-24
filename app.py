@@ -768,6 +768,32 @@ def favicon():
     return send_from_directory(app.static_folder, "favicon.ico", mimetype="image/x-icon")
 
 
+@app.route("/apple-touch-icon.png")
+@app.route("/apple-touch-icon-precomposed.png")
+def apple_touch_icon():
+    return send_from_directory(app.static_folder, "apple-touch-icon.png", mimetype="image/png")
+
+
+@app.route("/icon-48.png")
+def icon_48():
+    return send_from_directory(app.static_folder, "icon-48.png", mimetype="image/png")
+
+
+@app.route("/icon-192.png")
+def icon_192():
+    return send_from_directory(app.static_folder, "icon-192.png", mimetype="image/png")
+
+
+@app.route("/icon-512.png")
+def icon_512():
+    return send_from_directory(app.static_folder, "icon-512.png", mimetype="image/png")
+
+
+@app.route("/icon.svg")
+def icon_svg():
+    return send_from_directory(app.static_folder, "icon.svg", mimetype="image/svg+xml")
+
+
 @app.route("/manifest.json")
 def manifest_json():
     manifest = {
@@ -824,11 +850,8 @@ def sitemap_xml():
     pages = [
         ("/", "daily", "1.0"),
         ("/sobre-nosotros", "monthly", "0.8"),
-        ("/about", "monthly", "0.8"),
         ("/politica-de-privacidad", "monthly", "0.7"),
-        ("/privacy", "monthly", "0.7"),
         ("/terminos-de-servicio", "monthly", "0.7"),
-        ("/terms", "monthly", "0.7"),
     ]
     urls_xml = "".join(
         f"""  <url>
@@ -916,11 +939,11 @@ def render_legal_page(
   <meta property="og:description" content="{description}">
   <meta property="og:url" content="{canonical_url}">
   <meta property="og:image" content="{SITE_URL}/static/og-image.png">
-  <link rel="icon" href="/favicon.ico" sizes="48x48">
-  <link rel="icon" href="/static/icon-48.png" type="image/png" sizes="48x48">
-  <link rel="icon" href="/static/icon-192.png" type="image/png" sizes="192x192">
-  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="48x48" href="/icon-48.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/static/styles.css?v=15">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4665232577336299" crossorigin="anonymous"></script>
   <script>
