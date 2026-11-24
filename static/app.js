@@ -1048,31 +1048,51 @@
     matchmakeCard.classList.toggle("searching", state.searchingMatch);
     btnQuickMatch.hidden = state.searchingMatch;
     btnCancelMatch.hidden = !state.searchingMatch;
+    const isEn = window.i18n && window.i18n.getLanguage() === "en";
     matchmakeStatusText.textContent = state.searchingMatch
-      ? "Buscando oponente en el Dojo... En cuanto otro jugador pulse Buscar Rival, la partida iniciará automáticamente."
-      : "Busca a otro jugador en cola y comienza una partida automáticamente con asignación de bandos.";
+      ? (isEn
+          ? "Searching for an opponent in the Dojo... As soon as another player joins, the match begins automatically."
+          : "Buscando oponente en el Dojo... En cuanto otro jugador pulse Buscar Rival, la partida iniciará automáticamente.")
+      : (isEn
+          ? "Find another player in queue and start an online real-time match instantly with automatic side assignment."
+          : "Busca a otro jugador en cola y comienza una partida automáticamente con asignación de bandos.");
   }
 
   function renderLobby() {
     if (!state.lobbyData) return;
     const { open_rooms = [], live_rooms = [], queue_count = 0, online_players = [] } = state.lobbyData;
+    const isEn = window.i18n && window.i18n.getLanguage() === "en";
 
-    onlineCountLabel.textContent = `${online_players.length} en el lobby`;
-    queueCountBadge.textContent = `${queue_count} buscando rival`;
+    onlineCountLabel.textContent = isEn
+      ? `${online_players.length} in the lobby`
+      : `${online_players.length} en el lobby`;
+    queueCountBadge.textContent = isEn
+      ? `${queue_count} searching rival`
+      : `${queue_count} buscando rival`;
     updateMatchmakingUI();
 
     // 1. Salas Abiertas Esperando Rival
     if (open_rooms.length === 0) {
-      openRoomsList.innerHTML = `<p class="empty-state">No hay salas públicas esperando jugador. ¡Crea una sala o pulsa "Buscar Rival Ahora"!</p>`;
+      openRoomsList.innerHTML = `<p class="empty-state">${
+        isEn
+          ? 'No public rooms waiting for players. Create a room or click "Find Opponent Now"!'
+          : 'No hay salas públicas esperando jugador. ¡Crea una sala o pulsa "Buscar Rival Ahora"!'
+      }</p>`;
     } else {
       const frag = document.createDocumentFragment();
       for (const r of open_rooms) {
         const row = document.createElement("div");
         row.className = "room-row";
-        const hostSide = r.players.negro.connected
-          ? `☗ Negro: ${escapeHTML(r.players.negro.name)}`
-          : `☖ Blanco: ${escapeHTML(r.players.blanco.name)}`;
-        const freeSide = r.open_seat === "negro" ? "Libre: ☗ Negro" : "Libre: ☖ Blanco";
+        const hostSide = isEn
+          ? (r.players.negro.connected
+              ? `☗ Black: ${escapeHTML(r.players.negro.name)}`
+              : `☖ White: ${escapeHTML(r.players.blanco.name)}`)
+          : (r.players.negro.connected
+              ? `☗ Negro: ${escapeHTML(r.players.negro.name)}`
+              : `☖ Blanco: ${escapeHTML(r.players.blanco.name)}`);
+        const freeSide = isEn
+          ? (r.open_seat === "negro" ? "Open: ☗ Black" : "Open: ☖ White")
+          : (r.open_seat === "negro" ? "Libre: ☗ Negro" : "Libre: ☖ Blanco");
         row.innerHTML = `
           <div class="room-row-info">
             <div class="room-row-title">
@@ -1084,7 +1104,7 @@
               <span class="seat-open">· ${freeSide}</span>
             </div>
           </div>
-          <button type="button" class="btn btn-primary">Unirse y Jugar</button>
+          <button type="button" class="btn btn-primary">${isEn ? "Join & Play" : "Unirse y Jugar"}</button>
         `;
         row.querySelector("button").addEventListener("click", () => {
           joinRoomByCode(r.room_code, getNickname());
@@ -1096,12 +1116,21 @@
 
     // 2. Partidas en Vivo (Espectador)
     if (live_rooms.length === 0) {
-      liveRoomsList.innerHTML = `<p class="empty-state">No hay partidas en curso en este momento.</p>`;
+      liveRoomsList.innerHTML = `<p class="empty-state">${
+        isEn
+          ? "No active matches right now."
+          : "No hay partidas en curso en este momento."
+      }</p>`;
     } else {
       const frag = document.createDocumentFragment();
       for (const r of live_rooms) {
         const row = document.createElement("div");
         row.className = "room-row";
+        const turnLabel = isEn
+          ? (r.turn === "negro" ? "☗ Black" : "☖ White")
+          : (r.turn === "negro" ? "☗ Negro" : "☖ Blanco");
+        const moveLabel = isEn ? "Move" : "Jugada";
+        const turnText = isEn ? "Turn:" : "Turno:";
         row.innerHTML = `
           <div class="room-row-info">
             <div class="room-row-title">
@@ -1109,10 +1138,10 @@
               <code>${escapeHTML(r.room_code)}</code>
             </div>
             <div class="room-row-players">
-              <span>Jugada #${Number(r.move_count) || 0} · Turno: ${r.turn === "negro" ? "☗ Negro" : "☖ Blanco"}</span>
+              <span>${moveLabel} #${Number(r.move_count) || 0} · ${turnText} ${turnLabel}</span>
             </div>
           </div>
-          <button type="button" class="btn">Ver partida</button>
+          <button type="button" class="btn">${isEn ? "Spectate" : "Ver partida"}</button>
         `;
         row.querySelector("button").addEventListener("click", () => {
           joinRoomByCode(r.room_code, getNickname(), null, true);
@@ -1124,16 +1153,18 @@
 
     // 3. Jugadores Conectados en el Lobby
     if (online_players.length === 0) {
-      onlinePlayersList.innerHTML = `<li class="player-chip">Conectando al lobby...</li>`;
+      onlinePlayersList.innerHTML = `<li class="player-chip">${isEn ? "Connecting to lobby..." : "Conectando al lobby..."}</li>`;
     } else {
       onlinePlayersList.innerHTML = online_players
         .map((p) => {
           const isMe = p.player_id === state.playerId;
           const searching = p.status === "searching";
+          const youLabel = isEn ? " (You)" : " (Tú)";
+          const searchLabel = isEn ? " · Searching rival..." : " · Buscando rival...";
           return `
             <li class="player-chip ${searching ? "searching" : ""}">
               <span class="status-dot online" aria-hidden="true"></span>
-              <span>${escapeHTML(p.name)}${isMe ? " (Tú)" : ""}${searching ? " · Buscando rival..." : ""}</span>
+              <span>${escapeHTML(p.name)}${isMe ? youLabel : ""}${searching ? searchLabel : ""}</span>
             </li>
           `;
         })
@@ -2172,8 +2203,11 @@
   function syncAudioUI() {
     if (!btnToggleMusic) return;
     const active = zenAudio.isPlaying();
+    const isEn = window.i18n && window.i18n.getLanguage() === "en";
     btnToggleMusic.setAttribute("aria-pressed", active ? "true" : "false");
-    btnToggleMusic.textContent = active ? "🎵 Música: ON" : "🎵 Música: OFF";
+    btnToggleMusic.textContent = active
+      ? (isEn ? "🎶 Music: ON" : "🎶 Música: ON")
+      : (isEn ? "🎵 Music: OFF" : "🎵 Música: OFF");
     if (audioPill) {
       audioPill.classList.toggle("playing", active);
     }
@@ -2249,13 +2283,17 @@
   });
 
   window.addEventListener("shogi:langchange", () => {
+    syncAudioUI();
     if (state.view === "game") {
       renderGameAll();
       if (state.tutorialActive) {
         loadTutorialStep(state.tutorialStep);
       }
-    } else if (state.view === "lobby" && state.lobbyData) {
-      renderLobby(state.lobbyData);
+    } else if (state.view === "lobby") {
+      updateMatchmakingUI();
+      if (state.lobbyData) {
+        renderLobby();
+      }
     }
   });
 
