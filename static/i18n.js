@@ -133,6 +133,8 @@
       footer_sitemap: "Sitemap XML",
       footer_bug: "🐞 Reportar Error",
       footer_desc: "Plataforma web comunitaria e independiente para jugar al Shōgi (Ajedrez Tradicional Japonés) online en tiempo real para 2 jugadores, con motor de reglas oficiales en Python, Lobby de Matchmaking y Academia interactiva paso a paso en español e inglés.",
+      footer_copy: "© 2026 Shōgi Dojo Online. Creado y mantenido con dedicación por <strong>Javier Valdivieso</strong> (Mendoza, Argentina).",
+      footer_license: 'Motor en Python (<code>Tablero</code>, <code>Jugador</code>, <code>Pieza</code>) bajo Licencia MIT · <a href="https://github.com/valdivieso01/shogi-web" target="_blank" rel="noopener noreferrer">GitHub: valdivieso01/shogi-web</a>',
 
       // Glosario y Reglas
       rules_dialog_title: "Glosario de Piezas y Movimientos de Shōgi",
@@ -317,6 +319,8 @@
       footer_sitemap: "XML Sitemap",
       footer_bug: "🐞 Report Issue",
       footer_desc: "Free and independent community platform to play Shōgi (Traditional Japanese Chess) online in real-time for 2 players or vs AI, with official rule motor in Python, Matchmaking Lobby, and interactive 12-lesson Dojo Academy in Spanish and English.",
+      footer_copy: "© 2026 Shōgi Dojo Online. Created and maintained with care by <strong>Javier Valdivieso</strong> (Mendoza, Argentina).",
+      footer_license: 'Python Engine (<code>Tablero</code>, <code>Jugador</code>, <code>Pieza</code>) under MIT License · <a href="https://github.com/valdivieso01/shogi-web" target="_blank" rel="noopener noreferrer">GitHub: valdivieso01/shogi-web</a>',
 
       // Rules & Glossary
       rules_dialog_title: "Piece Glossary & Shōgi Rules",
@@ -649,6 +653,14 @@
     pillButtons.forEach((btn, idx) => {
       if (pillsList[idx]) btn.textContent = pillsList[idx];
     });
+
+    // Update footer navigation links according to current language
+    const linkAbout = document.getElementById("footer-link-about");
+    if (linkAbout) linkAbout.href = currentLang === "en" ? "/about" : "/sobre-nosotros";
+    const linkPrivacy = document.getElementById("footer-link-privacy");
+    if (linkPrivacy) linkPrivacy.href = currentLang === "en" ? "/privacy" : "/politica-de-privacidad";
+    const linkTerms = document.getElementById("footer-link-terms");
+    if (linkTerms) linkTerms.href = currentLang === "en" ? "/terms" : "/terminos-de-servicio";
 
     // Broadcast change to app.js
     window.dispatchEvent(new CustomEvent("shogi:langchange", { detail: { lang: currentLang } }));

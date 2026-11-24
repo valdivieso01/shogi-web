@@ -438,19 +438,19 @@
         </div>
 
         <nav class="site-footer-nav" aria-label="Enlaces legales y de información">
-          <a href="/sobre-nosotros" data-i18n="footer_about">Sobre Nosotros &amp; Contacto</a>
-          <a href="/politica-de-privacidad" data-i18n="footer_privacy">Política de Privacidad</a>
-          <a href="/terminos-de-servicio" data-i18n="footer_terms">Términos de Servicio</a>
+          <a href="/sobre-nosotros" id="footer-link-about" data-i18n="footer_about">Sobre Nosotros &amp; Contacto</a>
+          <a href="/politica-de-privacidad" id="footer-link-privacy" data-i18n="footer_privacy">Política de Privacidad</a>
+          <a href="/terminos-de-servicio" id="footer-link-terms" data-i18n="footer_terms">Términos de Servicio</a>
           <a href="/sitemap.xml" data-i18n="footer_sitemap">Sitemap XML</a>
           <button type="button" class="footer-link-btn" id="btn-open-bug-footer" data-i18n="footer_bug">🐞 Reportar Error</button>
         </nav>
       </div>
 
       <div class="site-footer-bottom">
-        <p>
+        <p data-i18n-html="footer_copy">
           © 2026 Shōgi Dojo Online. Creado y mantenido con dedicación por <strong>Javier Valdivieso</strong> (Mendoza, Argentina).
         </p>
-        <p>
+        <p data-i18n-html="footer_license">
           Motor en Python (<code>Tablero</code>, <code>Jugador</code>, <code>Pieza</code>) bajo Licencia MIT · <a href="https://github.com/valdivieso01/shogi-web" target="_blank" rel="noopener noreferrer">GitHub: valdivieso01/shogi-web</a>
         </p>
       </div>
@@ -671,7 +671,7 @@
     </div>
   </dialog>
 
-  <script src="/static/i18n.js?v=1"></script>
-  <script src="/static/app.js?v=16" defer></script>
+  <script src="/static/i18n.js?v=2"></script>
+  <script src="/static/app.js?v=17" defer></script>
 </body>
 </html>

@@ -824,8 +824,11 @@ def sitemap_xml():
     pages = [
         ("/", "daily", "1.0"),
         ("/sobre-nosotros", "monthly", "0.8"),
+        ("/about", "monthly", "0.8"),
         ("/politica-de-privacidad", "monthly", "0.7"),
+        ("/privacy", "monthly", "0.7"),
         ("/terminos-de-servicio", "monthly", "0.7"),
+        ("/terms", "monthly", "0.7"),
     ]
     urls_xml = "".join(
         f"""  <url>
@@ -842,11 +845,61 @@ def sitemap_xml():
     return Response(xml, mimetype="application/xml")
 
 
-def render_legal_page(title: str, description: str, body_html: str, canonical_path: str = "/") -> Response:
+def render_legal_page(
+    title: str,
+    description: str,
+    body_html: str,
+    canonical_path: str = "/",
+    lang: str = "es",
+    other_lang_url: str = "/",
+) -> Response:
     year = time.strftime("%Y")
     canonical_url = f"{SITE_URL}{canonical_path}"
+    is_en = lang == "en"
+
+    html_lang = "en" if is_en else "es"
+    og_locale = "en_US" if is_en else "es_AR"
+    subtitle = (
+        "Online Dojo · Real-Time Matchmaking & Game Rooms"
+        if is_en
+        else "Dojo Online · Matchmaking y Salas en Tiempo Real"
+    )
+    back_label = "← Back to Dojo / Board" if is_en else "← Volver al Dojo / Tablero"
+    home_url = "/?lang=en" if is_en else "/"
+    toggle_label = "ES" if is_en else "EN"
+
+    footer_desc = (
+        "Free and independent community platform to play Shōgi (Traditional Japanese Chess) online in real-time for 2 players or vs AI, with official rule motor in Python, Matchmaking Lobby, and interactive 12-lesson Dojo Academy in Spanish and English."
+        if is_en
+        else "Plataforma web comunitaria e independiente para jugar al Shōgi (Ajedrez Tradicional Japonés) online en tiempo real para 2 jugadores, con motor de reglas oficiales en Python, Lobby de Matchmaking y Academia interactiva paso a paso en español."
+    )
+    link_lobby = ("Lobby & Play" if is_en else "Lobby & Jugar", home_url)
+    link_about = (
+        "About Us & Contact" if is_en else "Sobre Nosotros & Contacto",
+        "/about" if is_en else "/sobre-nosotros",
+    )
+    link_privacy = (
+        "Privacy Policy" if is_en else "Política de Privacidad",
+        "/privacy" if is_en else "/politica-de-privacidad",
+    )
+    link_terms = (
+        "Terms of Service" if is_en else "Términos de Servicio",
+        "/terms" if is_en else "/terminos-de-servicio",
+    )
+
+    footer_copy = (
+        f"© {year} Shōgi Dojo Online. Created and maintained by <strong>Javier Valdivieso</strong> (Mendoza, Argentina)."
+        if is_en
+        else f"© {year} Shōgi Dojo Online. Creado y mantenido por <strong>Javier Valdivieso</strong> (Mendoza, Argentina)."
+    )
+    footer_source = (
+        'Open source under MIT License · <a href="https://github.com/valdivieso01/shogi-web" target="_blank" rel="noopener noreferrer">GitHub: valdivieso01/shogi-web</a>'
+        if is_en
+        else 'Código abierto bajo Licencia MIT · <a href="https://github.com/valdivieso01/shogi-web" target="_blank" rel="noopener noreferrer">GitHub: valdivieso01/shogi-web</a>'
+    )
+
     html = f"""<!DOCTYPE html>
-<html lang="es">
+<html lang="{html_lang}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -857,7 +910,7 @@ def render_legal_page(title: str, description: str, body_html: str, canonical_pa
   <meta name="google-adsense-account" content="ca-pub-4665232577336299">
   <link rel="canonical" href="{canonical_url}">
   <meta property="og:type" content="website">
-  <meta property="og:locale" content="es_AR">
+  <meta property="og:locale" content="{og_locale}">
   <meta property="og:site_name" content="Dojo Shōgi Online (将棋)">
   <meta property="og:title" content="{title} | Dojo Shōgi Online">
   <meta property="og:description" content="{description}">
@@ -881,11 +934,16 @@ def render_legal_page(title: str, description: str, body_html: str, canonical_pa
       <span class="brand-koma" aria-hidden="true">王</span>
       <div>
         <h1>Shōgi <span lang="ja">将棋</span></h1>
-        <p class="subtitle">Dojo Online · Matchmaking y Salas en Tiempo Real</p>
+        <p class="subtitle">{subtitle}</p>
       </div>
     </div>
     <div class="room-bar">
-      <a href="/" class="btn btn-primary" style="text-decoration:none;">← Volver al Dojo / Tablero</a>
+      <div class="lang-switch-pill">
+        <a href="{other_lang_url}" class="btn-lang-toggle" title="Cambiar idioma / Switch language" style="text-decoration:none;">
+          🌐 <span>{toggle_label}</span>
+        </a>
+      </div>
+      <a href="{home_url}" class="btn btn-primary" style="text-decoration:none;">{back_label}</a>
     </div>
   </header>
 
@@ -903,20 +961,18 @@ def render_legal_page(title: str, description: str, body_html: str, canonical_pa
             <span class="footer-koma-icon" aria-hidden="true">王</span>
             <span>Shōgi Dojo Online (<span lang="ja">将棋</span>)</span>
           </div>
-          <p>
-            Plataforma web comunitaria e independiente para jugar al Shōgi (Ajedrez Tradicional Japonés) online en tiempo real para 2 jugadores, con motor de reglas oficiales en Python, Lobby de Matchmaking y Academia interactiva paso a paso en español.
-          </p>
+          <p>{footer_desc}</p>
         </div>
         <nav class="site-footer-nav" aria-label="Enlaces legales y de información">
-          <a href="/">Lobby &amp; Jugar</a>
-          <a href="/sobre-nosotros">Sobre Nosotros &amp; Contacto</a>
-          <a href="/politica-de-privacidad">Política de Privacidad</a>
-          <a href="/terminos-de-servicio">Términos de Servicio</a>
+          <a href="{link_lobby[1]}">{link_lobby[0]}</a>
+          <a href="{link_about[1]}">{link_about[0]}</a>
+          <a href="{link_privacy[1]}">{link_privacy[0]}</a>
+          <a href="{link_terms[1]}">{link_terms[0]}</a>
         </nav>
       </div>
       <div class="site-footer-bottom">
-        <p>© {year} Shōgi Dojo Online. Creado y mantenido por <strong>Javier Valdivieso</strong> (Mendoza, Argentina).</p>
-        <p>Código abierto bajo Licencia MIT · <a href="https://github.com/valdivieso01/shogi-web" target="_blank" rel="noopener noreferrer">GitHub: valdivieso01/shogi-web</a></p>
+        <p>{footer_copy}</p>
+        <p>{footer_source}</p>
       </div>
     </div>
   </footer>
@@ -926,15 +982,67 @@ def render_legal_page(title: str, description: str, body_html: str, canonical_pa
 
 
 @app.route("/sobre-nosotros")
+@app.route("/about")
 def page_sobre_nosotros():
+    is_en = request.path == "/about" or request.args.get("lang") == "en"
+    if is_en:
+        body = """
+      <h1>About Us &amp; Contact</h1>
+      <p class="legal-updated">Independent Community Japanese Chess Platform</p>
+
+      <section class="legal-section">
+        <h2>What is Shōgi Dojo Online?</h2>
+        <p>
+          <strong>Shōgi Dojo Online (将棋)</strong> was founded with the mission to bring the ancient Japanese strategy game —<em>Shōgi</em>— to an international community through a free, lightning-fast web platform with no mandatory registrations and clear interactive guides.
+        </p>
+        <p>The platform features:</p>
+        <ul>
+          <li><strong>Official Python Rules Motor (OOP)</strong>: Complete piece validation, promotion in enemy ranks (<em>Nari</em>), drop reincorporation from the <em>Komadai</em> (<em>Drops</em>), algorithmic check detection (<em>Ōte</em>), checkmate (<em>Tsumi</em>), and traditional prohibitions like <em>Nifu</em> (two pawns on a file) and <em>Uchifuzume</em> (drop pawn mate).</li>
+          <li><strong>Real-Time Matchmaking Lobby</strong>: Automated quick pairing between online players, open public rooms, private code/link invite rooms, and live spectator mode powered by Server-Sent Events (SSE).</li>
+          <li><strong>Interactive 12-Lesson Dojo Academy</strong>: A practical, hands-on step-by-step course with visual compass diagrams (3×3 and 5×5) enabling anyone to master every piece without having to blindly memorize Kanji symbols.</li>
+        </ul>
+      </section>
+
+      <section class="legal-section legal-highlight-box">
+        <h2>Creator &amp; Mission</h2>
+        <p>
+          The project was designed, developed, and maintained independently by <strong>Javier Valdivieso</strong>, software developer based in Mendoza, Argentina. The goal is to provide an accessible, welcoming learning hub combining traditional pentagonal wooden pieces (<em>Koma</em>) with modern web design and multilingual accessibility.
+        </p>
+        <div class="legal-badges">
+          <span>Engine Repository: <a href="https://github.com/valdivieso01/shogi" target="_blank" rel="noopener noreferrer">valdivieso01/shogi</a></span>
+          <span>Web Platform: <a href="https://github.com/valdivieso01/shogi-web" target="_blank" rel="noopener noreferrer">valdivieso01/shogi-web</a></span>
+          <span>Location: Mendoza, Argentina</span>
+        </div>
+      </section>
+
+      <section class="legal-section">
+        <h2>Contact &amp; Feedback</h2>
+        <p>
+          Found an interesting edge case in the engine, have ideas for new lessons in the Academy, or wish to make an inquiry regarding privacy or advertising?
+        </p>
+        <p>
+          Reach out directly via email to:
+          <a href="mailto:hjavier.valdivieso@outlook.es" class="legal-mail-link">hjavier.valdivieso@outlook.es</a>
+        </p>
+      </section>
+        """
+        return render_legal_page(
+            "About Us & Contact",
+            "Learn about Dojo Shōgi Online (dojoshogi.online), an open-source Japanese chess project with matchmaking and a 12-lesson academy, and how to contact creator Javier Valdivieso.",
+            body,
+            canonical_path="/about",
+            lang="en",
+            other_lang_url="/sobre-nosotros",
+        )
+
     body = """
       <h1>Sobre Nosotros &amp; Contacto</h1>
-      <p class="legal-updated">Proyecto Independiente de Ajedrez Japonés en Español</p>
+      <p class="legal-updated">Proyecto Independiente de Ajedrez Japonés en Español e Inglés</p>
 
       <section class="legal-section">
         <h2>¿Qué es Shōgi Dojo Online?</h2>
         <p>
-          <strong>Shōgi Dojo Online (将棋)</strong> nació con la misión de acercar el milenario juego de estrategia japonés —el <em>Shōgi</em>— a la comunidad hispanohablante mediante una plataforma web gratuita, rápida, sin registros obligatorios y con explicaciones claras en español.
+          <strong>Shōgi Dojo Online (将棋)</strong> nació con la misión de acercar el milenario juego de estrategia japonés —el <em>Shōgi</em>— a la comunidad hispanohablante mediante una plataforma web gratuita, rápida, sin registros obligatorios y con explicaciones claras en español e inglés.
         </p>
         <p>La plataforma combina:</p>
         <ul>
@@ -947,7 +1055,7 @@ def page_sobre_nosotros():
       <section class="legal-section legal-highlight-box">
         <h2>El Creador y Misión</h2>
         <p>
-          El proyecto fue creado y es mantenido de forma independiente por <strong>Javier Valdivieso</strong>, desarrollador de software en Mendoza, Argentina. El objetivo es ofrecer un punto de encuentro accesible y educativo que combine fichas pentagonales tradicionales (<em>Koma</em>) con ayudas visuales pensadas para jugadores de habla hispana.
+          El proyecto fue creado y es mantenido de forma independiente por <strong>Javier Valdivieso</strong>, desarrollador de software en Mendoza, Argentina. El objetivo es ofrecer un punto de encuentro accesible y educativo que combine fichas pentagonales tradicionales (<em>Koma</em>) con ayudas visuales pensadas para jugadores de habla hispana e internacional.
         </p>
         <div class="legal-badges">
           <span>GitHub Motor: <a href="https://github.com/valdivieso01/shogi" target="_blank" rel="noopener noreferrer">valdivieso01/shogi</a></span>
@@ -971,12 +1079,77 @@ def page_sobre_nosotros():
         "Sobre Nosotros y Contacto",
         "Conoce qué es Dojo Shōgi Online (dojoshogi.online), la historia del proyecto de ajedrez japonés en español y cómo contactar con su creador Javier Valdivieso.",
         body,
-        "/sobre-nosotros",
+        canonical_path="/sobre-nosotros",
+        lang="es",
+        other_lang_url="/about",
     )
 
 
 @app.route("/politica-de-privacidad")
+@app.route("/privacy")
 def page_privacidad():
+    is_en = request.path == "/privacy" or request.args.get("lang") == "en"
+    if is_en:
+        body = """
+      <h1>Privacy Policy</h1>
+      <p class="legal-updated">Last updated: November 2026</p>
+
+      <section class="legal-section">
+        <h2>1. General Information</h2>
+        <p>
+          At <strong>Dojo Shōgi Online (将棋)</strong> (available at <a href="https://www.dojoshogi.online">https://www.dojoshogi.online</a>), visitor and player privacy is paramount. This document details the types of information processed when using our gaming and academy platform, as well as our cookie and advertising compliance with <strong>Google AdSense</strong> standards.
+        </p>
+      </section>
+
+      <section class="legal-section">
+        <h2>2. Game Data &amp; Local Storage</h2>
+        <p>
+          To enable instant, friction-free multiplayer gaming without requiring accounts with personal identifiers, Shōgi Dojo Online stores only in your browser (<code>localStorage</code> and <code>sessionStorage</code>) your chosen player nickname and a temporary cryptographic session token to reconnect you to active rooms upon page refresh.
+        </p>
+      </section>
+
+      <section class="legal-section">
+        <h2>3. Cookies &amp; Google AdSense Advertising</h2>
+        <p>
+          This website uses third-party advertising services, primarily <strong>Google AdSense</strong> (publisher ID <code>ca-pub-4665232577336299</code>). Google uses cookies to serve ads based on prior user visits to this or other websites:
+        </p>
+        <ul>
+          <li>Google's use of advertising cookies enables it and its partners to serve ads based on your visit to our site and/or other sites on the Internet.</li>
+          <li>Users may opt out of personalized advertising by visiting <a href="https://adssettings.google.com/" target="_blank" rel="noopener noreferrer">Google Ads Settings</a>.</li>
+          <li>For detailed info on how Google processes data across partner sites, visit: <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer">How Google uses information from sites or apps that use our services</a>.</li>
+        </ul>
+      </section>
+
+      <section class="legal-section">
+        <h2>4. Server Logs &amp; Technical Analytics</h2>
+        <p>
+          Standard technical logs (anonymized IP, browser type, timestamp, HTTP status code) are retained exclusively for diagnostic, anti-abuse (rate limiting / denial of service prevention), and server stability purposes.
+        </p>
+      </section>
+
+      <section class="legal-section">
+        <h2>5. External Links</h2>
+        <p>
+          Our platform links to open-source GitHub repositories. We are not responsible for the privacy practices or contents of external websites.
+        </p>
+      </section>
+
+      <section class="legal-section">
+        <h2>6. Contact</h2>
+        <p>
+          For any questions concerning this Privacy Policy, email us at <a href="mailto:hjavier.valdivieso@outlook.es">hjavier.valdivieso@outlook.es</a> or visit our <a href="/about">About Us &amp; Contact</a> page.
+        </p>
+      </section>
+        """
+        return render_legal_page(
+            "Privacy Policy",
+            "Privacy policy, cookie usage, and Google AdSense compliance for Dojo Shōgi Online (dojoshogi.online).",
+            body,
+            canonical_path="/privacy",
+            lang="en",
+            other_lang_url="/politica-de-privacidad",
+        )
+
     body = """
       <h1>Política de Privacidad</h1>
       <p class="legal-updated">Última actualización: Noviembre de 2026</p>
@@ -1032,12 +1205,63 @@ def page_privacidad():
         "Política de Privacidad",
         "Política de privacidad, uso de cookies y configuración de Google AdSense de Dojo Shōgi Online (dojoshogi.online).",
         body,
-        "/politica-de-privacidad",
+        canonical_path="/politica-de-privacidad",
+        lang="es",
+        other_lang_url="/privacy",
     )
 
 
 @app.route("/terminos-de-servicio")
+@app.route("/terms")
 def page_terminos():
+    is_en = request.path == "/terms" or request.args.get("lang") == "en"
+    if is_en:
+        body = """
+      <h1>Terms of Service &amp; Legal Notice</h1>
+      <p class="legal-updated">Last updated: November 2026</p>
+
+      <section class="legal-section">
+        <h2>1. Service Nature</h2>
+        <p>
+          <strong>Dojo Shōgi Online</strong> (<a href="https://www.dojoshogi.online">https://www.dojoshogi.online</a>) is a free community platform dedicated to learning and playing Shōgi (Traditional Japanese Chess) online in real-time with other players, against Sensei Bot (AI), or in local pass-and-play mode. Accessing this platform signifies acceptance of these core terms of service.
+        </p>
+      </section>
+
+      <section class="legal-section">
+        <h2>2. Lobby Conduct &amp; Fair Play</h2>
+        <p>
+          When choosing a player nickname or public room title in the Dojo, users agree not to use:
+        </p>
+        <ul>
+          <li>Offensive, discriminatory, defamatory, or hateful content.</li>
+          <li>Commercial spam, malicious URLs, or impersonation.</li>
+          <li>Automated bots or denial-of-service attacks against matchmaking streams (SSE) or game APIs.</li>
+        </ul>
+      </section>
+
+      <section class="legal-section">
+        <h2>3. Intellectual Property &amp; MIT License</h2>
+        <p>
+          The underlying Python Shōgi engine and web front-end are distributed for educational and community benefit under the open-source <strong>MIT License</strong> on GitHub (<a href="https://github.com/valdivieso01/shogi-web" target="_blank" rel="noopener noreferrer">valdivieso01/shogi-web</a>).
+        </p>
+      </section>
+
+      <section class="legal-section">
+        <h2>4. Disclaimer of Warranties</h2>
+        <p>
+          The service is provided &ldquo;as is&rdquo;, without warranties of uninterrupted uptime. Game rooms are ephemeral and stored in memory for active sessions.
+        </p>
+      </section>
+        """
+        return render_legal_page(
+            "Terms of Service",
+            "Terms and conditions of use for the website and multiplayer matchmaking lobby of Dojo Shōgi Online (dojoshogi.online).",
+            body,
+            canonical_path="/terms",
+            lang="en",
+            other_lang_url="/terminos-de-servicio",
+        )
+
     body = """
       <h1>Términos de Servicio y Aviso Legal</h1>
       <p class="legal-updated">Última actualización: Noviembre de 2026</p>
@@ -1079,7 +1303,9 @@ def page_terminos():
         "Términos de Servicio",
         "Términos y condiciones de uso del sitio web y Lobby multijugador Dojo Shōgi Online (dojoshogi.online).",
         body,
-        "/terminos-de-servicio",
+        canonical_path="/terminos-de-servicio",
+        lang="es",
+        other_lang_url="/terms",
     )
 
 
