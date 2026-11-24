@@ -1207,13 +1207,16 @@
     const dirClass = pointsDown ? "points-down" : "";
     const promoClass = piece.promoted ? "promoted" : "";
     const codeLabel = piece.display_code || piece.code;
+    const subLabel = (window.i18n && window.i18n.getPieceLabel)
+      ? window.i18n.getPieceLabel(piece.code, piece.promoted)
+      : piece.es;
     return `
       <div class="koma-tile ${dirClass} ${promoClass}">
         <div class="koma-top-row">
           <span class="koma-kanji" lang="ja">${piece.kanji}</span>
           <span class="koma-code">${codeLabel}</span>
         </div>
-        <span class="koma-sub">${piece.es}</span>
+        <span class="koma-sub">${subLabel}</span>
       </div>
     `;
   }
@@ -1373,13 +1376,14 @@
     if (!state.game) return;
     roomCodeDisplay.textContent = state.roomCode || "---";
 
+    const isEn = window.i18n && window.i18n.getLanguage() === "en";
     const roleLabels = {
-      negro: "Juegas con Negro ☗",
-      blanco: "Juegas con Blanco ☖",
-      ambos: "Modo Local (Ambos)",
-      espectador: "Espectador",
+      negro: isEn ? "Playing as Black ☗" : "Juegas con Negro ☗",
+      blanco: isEn ? "Playing as White ☖" : "Juegas con Blanco ☖",
+      ambos: isEn ? "Local Mode (Both)" : "Modo Local (Ambos)",
+      espectador: isEn ? "Spectator" : "Espectador",
     };
-    myRoleBadge.textContent = roleLabels[state.myColor] || "Sin sala";
+    myRoleBadge.textContent = roleLabels[state.myColor] || (isEn ? "No room" : "Sin sala");
 
     const shareUrl = getInviteUrl(state.roomCode);
     inviteUrlInput.value = shareUrl;
@@ -1391,28 +1395,41 @@
 
     checkAlert.hidden = !state.game.in_check;
     if (state.game.in_check) {
-      const checkedName = state.game.in_check === "negro" ? "Sente (Negro ☗)" : "Gote (Blanco ☖)";
-      checkAlert.innerHTML = `¡Jaque al Rey de <strong>${checkedName}</strong> (<span lang="ja">王手</span>)!`;
+      const checkedName = state.game.in_check === "negro"
+        ? (isEn ? "Black (Sente ☗)" : "Sente (Negro ☗)")
+        : (isEn ? "White (Gote ☖)" : "Gote (Blanco ☖)");
+      checkAlert.innerHTML = isEn
+        ? `Check on <strong>${checkedName}'s</strong> King (<span lang="ja">王手</span>)!`
+        : `¡Jaque al Rey de <strong>${checkedName}</strong> (<span lang="ja">王手</span>)!`;
     }
 
     if (state.game.winner) {
       turnBanner.classList.add("winner");
-      turnBanner.textContent = state.game.reason || "Partida terminada.";
+      turnBanner.textContent = state.game.reason || (isEn ? "Game Over." : "Partida terminada.");
     } else {
       turnBanner.classList.remove("winner");
-      const turnLabel = state.game.turn === "negro" ? "Sente (Negro ☗)" : "Gote (Blanco ☖)";
+      const turnLabel = state.game.turn === "negro"
+        ? (isEn ? "Black (Sente ☗)" : "Sente (Negro ☗)")
+        : (isEn ? "White (Gote ☖)" : "Gote (Blanco ☖)");
       if (waitingOpponent) {
-        turnBanner.textContent = `Esperando al 2.º jugador... Turno inicial: ${turnLabel}`;
+        turnBanner.textContent = isEn
+          ? `Waiting for opponent... Starting turn: ${turnLabel}`
+          : `Esperando al 2.º jugador... Turno inicial: ${turnLabel}`;
       } else if (canControlColor(state.game.turn)) {
-        turnBanner.textContent = `Es tu turno — Mueve con ${turnLabel}`;
+        turnBanner.textContent = isEn
+          ? `Your turn — Move ${turnLabel}`
+          : `Es tu turno — Mueve con ${turnLabel}`;
       } else {
-        turnBanner.textContent = `Turno de ${turnLabel} (esperando su jugada...)`;
+        turnBanner.textContent = isEn
+          ? `${turnLabel}'s turn (waiting for move...)`
+          : `Turno de ${turnLabel} (esperando su jugada...)`;
       }
     }
 
-    moveCounter.textContent = `${state.game.move_count} ${state.game.move_count === 1 ? "jugada" : "jugadas"}`;
+    const moveWord = isEn ? (state.game.move_count === 1 ? "move" : "moves") : (state.game.move_count === 1 ? "jugada" : "jugadas");
+    moveCounter.textContent = `${state.game.move_count} ${moveWord}`;
     const items = (state.game.history || []).map((h) => `<li>${escapeHTML(h.notation)}</li>`).join("");
-    historyList.innerHTML = items || `<li>Sin movimientos todavía</li>`;
+    historyList.innerHTML = items || `<li>${isEn ? "No moves yet" : "Sin movimientos todavía"}</li>`;
     historyList.scrollTop = historyList.scrollHeight;
 
     const isSpectator = state.myColor === "espectador";
@@ -1730,18 +1747,30 @@
     }
 
     const pct = Math.round(((idx + 1) / TUTORIAL_LESSONS.length) * 100);
-    senseiStepBadge.textContent = `Lección ${idx + 1} de ${TUTORIAL_LESSONS.length}`;
-    senseiTitle.textContent = lesson.title;
+    const isEn = window.i18n && window.i18n.getLanguage() === "en";
+    const localized = (window.i18n && window.i18n.getLessonText)
+      ? window.i18n.getLessonText(idx, isEn ? "en" : "es")
+      : null;
+    const lessonTitle = localized ? localized.title : lesson.title;
+    const lessonText = localized ? localized.text : lesson.text;
+    const lessonKeyPoints = localized ? localized.keyPoints : lesson.keyPoints;
+    const lessonObjective = localized ? localized.objective : lesson.objective;
+
+    senseiStepBadge.textContent = isEn
+      ? `Lesson ${idx + 1} of ${TUTORIAL_LESSONS.length}`
+      : `Lección ${idx + 1} de ${TUTORIAL_LESSONS.length}`;
+    senseiTitle.textContent = lessonTitle;
     senseiProgressFill.style.setProperty("--progress", `${pct}%`);
-    senseiText.textContent = lesson.text;
-    senseiKeyPoints.innerHTML = (lesson.keyPoints || []).map((pt) => `<li>${pt}</li>`).join("");
+    senseiText.textContent = lessonText;
+    senseiKeyPoints.innerHTML = (lessonKeyPoints || []).map((pt) => `<li>${pt}</li>`).join("");
     senseiDiagrams.innerHTML = (lesson.diagrams || []).map(renderCompassHTML).join("");
-    senseiObjective.textContent = lesson.objective;
+    senseiObjective.textContent = lessonObjective;
     senseiObjective.classList.remove("completed");
 
     btnTutPrev.disabled = idx === 0;
-    btnTutNext.textContent =
-      idx === TUTORIAL_LESSONS.length - 1 ? "Finalizar curso y volver al Lobby" : "Siguiente lección →";
+    btnTutNext.textContent = idx === TUTORIAL_LESSONS.length - 1
+      ? (isEn ? "Finish Course & Back to Lobby" : "Finalizar curso y volver al Lobby")
+      : (isEn ? "Next lesson →" : "Siguiente lección →");
 
     renderGameAll();
   }
@@ -1869,7 +1898,12 @@
     const givesCheckToBlanco = [5, 8, 11].includes(state.tutorialStep);
     state.game.in_check = givesCheckToBlanco ? "blanco" : null;
     clearSelection();
-    senseiObjective.textContent = `✅ ${lesson.afterSuccessText}`;
+    const isEn = window.i18n && window.i18n.getLanguage() === "en";
+    const localized = (window.i18n && window.i18n.getLessonText)
+      ? window.i18n.getLessonText(state.tutorialStep, isEn ? "en" : "es")
+      : null;
+    const successText = localized ? localized.afterSuccessText : lesson.afterSuccessText;
+    senseiObjective.textContent = `✅ ${successText}`;
     senseiObjective.classList.add("completed");
     renderGameAll();
 
@@ -2211,6 +2245,17 @@
       joinRoomByCode(roomParam, getNickname(), saved ? saved.token : null);
     } else {
       returnToLobby();
+    }
+  });
+
+  window.addEventListener("shogi:langchange", () => {
+    if (state.view === "game") {
+      renderGameAll();
+      if (state.tutorialActive) {
+        loadTutorialStep(state.tutorialStep);
+      }
+    } else if (state.view === "lobby" && state.lobbyData) {
+      renderLobby(state.lobbyData);
     }
   });
 

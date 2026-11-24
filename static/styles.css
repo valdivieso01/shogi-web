@@ -184,6 +184,42 @@ body {
   cursor: pointer;
 }
 
+.lang-switch-pill {
+  display: flex;
+  align-items: safe center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-gold);
+  border-radius: 999px;
+  padding: 0.15rem 0.35rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  transition: all 0.2s ease;
+}
+
+.lang-switch-pill:hover {
+  border-color: #ffd885;
+  box-shadow: 0 0 10px rgba(223, 177, 91, 0.3);
+}
+
+.btn-lang-toggle {
+  background: transparent;
+  border: none;
+  color: var(--accent-gold);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.btn-lang-toggle:hover {
+  color: #fff;
+}
+
 /* ==========================================
    VISTA 1: LOBBY DE EMPAREJAMIENTO Y SALAS
    ========================================== */

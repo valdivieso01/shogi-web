@@ -124,27 +124,32 @@
       <span class="brand-koma" aria-hidden="true">王</span>
       <div>
         <h1>Shōgi <span lang="ja">将棋</span></h1>
-        <p class="subtitle">Dojo Online · Matchmaking y Salas en Tiempo Real</p>
+        <p class="subtitle" data-i18n="subtitle">Dojo Online · Matchmaking y Salas en Tiempo Real</p>
       </div>
     </div>
 
     <div class="room-bar" id="room-bar">
-      <button type="button" class="btn" id="btn-back-lobby" hidden>
+      <div class="lang-switch-pill" role="group" aria-label="Selector de idioma / Language selector">
+        <button type="button" class="btn-lang-toggle" id="btn-toggle-lang" title="Cambiar idioma (Español / English)">
+          🌐 <span id="current-lang-label">ES</span>
+        </button>
+      </div>
+      <button type="button" class="btn" id="btn-back-lobby" data-i18n="btn_back_lobby" hidden>
         ← Volver al Lobby
       </button>
       <div class="room-pill" id="room-pill" hidden>
         <span class="status-dot" id="conn-dot" aria-hidden="true"></span>
-        <span class="room-label">Sala:</span>
+        <span class="room-label" data-i18n="room_label">Sala:</span>
         <code id="room-code-display">---</code>
         <span class="role-badge" id="my-role-badge">Sin sala</span>
       </div>
-      <button type="button" class="btn btn-accent" id="btn-copy-link" hidden>
+      <button type="button" class="btn btn-accent" id="btn-copy-link" data-i18n="btn_copy_link" hidden>
         Copiar link de invitación
       </button>
-      <button type="button" class="btn" id="btn-flip-board" hidden>
+      <button type="button" class="btn" id="btn-flip-board" data-i18n="btn_flip_board" hidden>
         Girar tablero
       </button>
-      <button type="button" class="btn btn-accent" id="btn-start-tutorial-top">
+      <button type="button" class="btn btn-accent" id="btn-start-tutorial-top" data-i18n="btn_learn_play">
         🎓 Aprender a Jugar
       </button>
       <div class="audio-control-pill" role="group" aria-label="Control de música relajante del Dojo">
@@ -161,13 +166,13 @@
           aria-label="Volumen de la música relajante"
         >
       </div>
-      <button type="button" class="btn" id="btn-open-create-modal">
+      <button type="button" class="btn" id="btn-open-create-modal" data-i18n="btn_create_room_top">
         + Crear Sala
       </button>
-      <button type="button" class="btn" id="btn-open-rules">
+      <button type="button" class="btn" id="btn-open-rules" data-i18n="btn_rules_top">
         Glosario y Reglas
       </button>
-      <button type="button" class="btn btn-danger" id="btn-open-bug-report">
+      <button type="button" class="btn btn-danger" id="btn-open-bug-report" data-i18n="btn_bug_top">
         🐞 Reportar Error
       </button>
     </div>
@@ -178,9 +183,9 @@
     <section class="lobby-page" id="lobby-view" aria-label="Lobby principal de emparejamiento y salas">
       <div class="lobby-hero">
         <div class="hero-profile">
-          <label class="field-label" for="lobby-nickname">Tu nombre de jugador en el Dojo</label>
+          <label class="field-label" for="lobby-nickname" data-i18n="player_name_label">Tu nombre de jugador en el Dojo</label>
           <div class="profile-input-row">
-            <input type="text" id="lobby-nickname" class="text-input" placeholder="Ej. Kenshin" maxlength="24" autocomplete="nickname">
+            <input type="text" id="lobby-nickname" class="text-input" placeholder="Ej. Kenshin" data-i18n-placeholder="player_name_placeholder" maxlength="24" autocomplete="nickname">
             <span class="online-pill">
               <span class="status-dot online" aria-hidden="true"></span>
               <span id="online-count-label">1 en el lobby</span>
@@ -190,20 +195,20 @@
 
         <div class="matchmake-card" id="matchmake-card">
           <div class="matchmake-info">
-            <h2>Emparejamiento Rápido (<span lang="ja">対局</span>)</h2>
-            <p id="matchmake-status-text">
+            <h2 data-i18n-html="quick_match_title">Emparejamiento Rápido (<span lang="ja">対局</span>)</h2>
+            <p id="matchmake-status-text" data-i18n="quick_match_desc">
               Busca a otro jugador en cola y comienza una partida automáticamente con asignación de bandos.
             </p>
           </div>
           <div class="matchmake-actions">
             <span class="queue-badge" id="queue-count-badge">0 buscando rival</span>
-            <button type="button" class="btn btn-primary btn-lg" id="btn-quick-match">
+            <button type="button" class="btn btn-primary btn-lg" id="btn-quick-match" data-i18n="btn_quick_match">
               ⚔️ Buscar Rival Ahora
             </button>
-            <button type="button" class="btn btn-danger btn-lg" id="btn-cancel-match" hidden>
+            <button type="button" class="btn btn-danger btn-lg" id="btn-cancel-match" data-i18n="btn_cancel_match" hidden>
               Cancelar búsqueda
             </button>
-            <button type="button" class="btn btn-accent btn-lg" id="btn-play-ai-quick">
+            <button type="button" class="btn btn-accent btn-lg" id="btn-play-ai-quick" data-i18n="btn_play_ai">
               🤖 Jugar vs Bot (1J)
             </button>
           </div>
@@ -213,9 +218,9 @@
       <!-- SECCIÓN NUEVA: ACADEMIA DE SHŌGI (CURSO INTERACTIVO COMPLETO DE 12 LECCIONES) -->
       <section class="tutorial-banner-card" aria-labelledby="tutorial-lobby-heading">
         <div class="tutorial-banner-info">
-          <span class="tutorial-tag">🎓 Academia Interactiva Completa · 12 Lecciones con Diagramas</span>
-          <h2 id="tutorial-lobby-heading">Curso Paso a Paso: Cómo Mueve Cada Pieza, Reglas y Tácticas</h2>
-          <p>
+          <span class="tutorial-tag" data-i18n="academy_badge">🎓 Academia Interactiva Completa · 12 Lecciones con Diagramas</span>
+          <h2 id="tutorial-lobby-heading" data-i18n="academy_heading">Curso Paso a Paso: Cómo Mueve Cada Pieza, Reglas y Tácticas</h2>
+          <p data-i18n="academy_desc">
             Aprende desde cero con diagramas visuales de movimiento (brújula de casillas) y práctica en el tablero:
             <strong>Rey</strong>, <strong>General de Oro</strong>, <strong>General de Plata</strong>, <strong>Peón y Tokin</strong>, <strong>Lancero</strong>, <strong>Caballo</strong>, <strong>Alfil y Caballo Dragón</strong>, <strong>Torre y Dragón</strong>, <strong>Reincorporaciones (Drops)</strong>, prohibiciones (<strong>Nifu y Uchifuzume</strong>), <strong>Defensa de Jaque</strong> y <strong>Jaque Mate</strong>.
           </p>
@@ -235,7 +240,7 @@
           </div>
         </div>
         <div class="tutorial-banner-cta">
-          <button type="button" class="btn btn-primary btn-lg" id="btn-start-tutorial-hero">
+          <button type="button" class="btn btn-primary btn-lg" id="btn-start-tutorial-hero" data-i18n="btn_start_course">
             🎓 Empezar Curso desde Lección 1
           </button>
         </div>
@@ -245,39 +250,39 @@
         <!-- Salas Públicas Esperando Jugador -->
         <section class="lobby-panel" aria-labelledby="open-rooms-heading">
           <div class="panel-header">
-            <h2 id="open-rooms-heading">Salas Abiertas Esperando Rival</h2>
-            <button type="button" class="btn btn-accent" id="btn-create-public-quick">
+            <h2 id="open-rooms-heading" data-i18n="open_rooms_heading">Salas Abiertas Esperando Rival</h2>
+            <button type="button" class="btn btn-accent" id="btn-create-public-quick" data-i18n="btn_new_public_room">
               + Nueva Sala Pública
             </button>
           </div>
           <div class="rooms-list" id="open-rooms-list" aria-live="polite">
-            <p class="empty-state">No hay salas esperando jugador. ¡Crea una o usa Buscar Rival!</p>
+            <p class="empty-state" data-i18n="no_open_rooms">No hay salas esperando jugador. ¡Crea una o usa Buscar Rival!</p>
           </div>
         </section>
 
         <!-- Partidas en Curso + Unirse por Código + Jugadores en Línea -->
         <div class="lobby-side-stack">
           <section class="lobby-panel" aria-labelledby="join-by-code-heading">
-            <h2 id="join-by-code-heading">Unirse con Código Privado</h2>
+            <h2 id="join-by-code-heading" data-i18n="join_code_heading">Unirse con Código Privado</h2>
             <div class="code-join-row">
-              <input type="text" id="direct-code-input" class="text-input code-input" placeholder="CÓDIGO (6 LETRAS)" maxlength="6" aria-label="Código de sala de 6 caracteres">
-              <button type="button" class="btn btn-accent" id="btn-direct-join">Entrar</button>
+              <input type="text" id="direct-code-input" class="text-input code-input" placeholder="CÓDIGO (6 LETRAS)" data-i18n-placeholder="join_code_placeholder" maxlength="6" aria-label="Código de sala de 6 caracteres">
+              <button type="button" class="btn btn-accent" id="btn-direct-join" data-i18n="btn_direct_join">Entrar</button>
             </div>
             <p class="dialog-error" id="direct-join-error" role="alert" hidden></p>
           </section>
 
           <section class="lobby-panel" aria-labelledby="live-rooms-heading">
             <div class="panel-header">
-              <h2 id="live-rooms-heading">Partidas en Vivo (Espectador)</h2>
+              <h2 id="live-rooms-heading" data-i18n="live_rooms_heading">Partidas en Vivo (Espectador)</h2>
             </div>
             <div class="rooms-list compact-list" id="live-rooms-list" aria-live="polite">
-              <p class="empty-state">No hay partidas en curso en este momento.</p>
+              <p class="empty-state" data-i18n="no_live_rooms">No hay partidas en curso en este momento.</p>
             </div>
           </section>
 
           <section class="lobby-panel" aria-labelledby="online-players-heading">
             <div class="panel-header">
-              <h2 id="online-players-heading">Jugadores en el Lobby</h2>
+              <h2 id="online-players-heading" data-i18n="online_players_heading">Jugadores en el Lobby</h2>
             </div>
             <ul class="players-online-list" id="online-players-list" aria-live="polite"></ul>
           </section>
@@ -286,23 +291,23 @@
 
       <!-- Sección Editorial / SEO para Indexado en Google y Google AdSense -->
       <section class="seo-editorial-section" aria-labelledby="seo-guide-heading">
-        <h2 id="seo-guide-heading">¿Qué es el Shōgi (<span lang="ja">将棋</span>) y cómo funciona el Ajedrez Japonés?</h2>
+        <h2 id="seo-guide-heading" data-i18n="seo_heading">¿Qué es el Shōgi (<span lang="ja">将棋</span>) y cómo funciona el Ajedrez Japonés?</h2>
         <div class="seo-editorial-grid">
           <article class="seo-article-card">
-            <h3>🏯 El Tablero 9×9 y las Fichas Pentagonales (Koma)</h3>
-            <p>
+            <h3 data-i18n="seo_art1_title">🏯 El Tablero 9×9 y las Fichas Pentagonales (Koma)</h3>
+            <p data-i18n="seo_art1_text">
               El <strong>Shōgi</strong>, conocido en Japón como el <em>Juego de los Generales</em>, se disputa sobre un tablero rectangular de 9 filas por 9 columnas (<em>Shōgiban</em>). A diferencia del ajedrez occidental, todas las piezas tienen el mismo color de madera: la pertenencia a cada jugador —<strong>Sente (☗ Negro, quien mueve primero)</strong> o <strong>Gote (☖ Blanco)</strong>— se identifica por la dirección hacia la que apunta la punta de cada ficha pentagonal.
             </p>
           </article>
           <article class="seo-article-card">
-            <h3>🔄 La Regla de Reincorporación (Drops / <span lang="ja">打ち</span>)</h3>
-            <p>
+            <h3 data-i18n="seo_art2_title">🔄 La Regla de Reincorporación (Drops / <span lang="ja">打ち</span>)</h3>
+            <p data-i18n="seo_art2_text">
               La característica estratégica que hace único al Shōgi en todo el mundo es que <strong>las piezas capturadas nunca mueren</strong>. Cuando capturas una ficha del adversario, esta pierde su promoción, pasa a tu soporte lateral (<em>Komadai</em>) y en cualquiera de tus turnos posteriores puedes gastarlo para <strong>reincorporarla en una casilla vacía</strong> como parte de tu propio ejército.
             </p>
           </article>
           <article class="seo-article-card">
-            <h3>⚡ Zona de Promoción (<span lang="ja">成り</span>) y Reglas Especiales</h3>
-            <p>
+            <h3 data-i18n="seo_art3_title">⚡ Zona de Promoción (<span lang="ja">成り</span>) y Reglas Especiales</h3>
+            <p data-i18n="seo_art3_text">
               Las 3 filas más alejadas de cada jugador conforman la <strong>zona de promoción</strong>. Al entrar, moverse o salir de ella, los Peones, Lanceros, Caballos y Generales de Plata pueden promocionar para mover como un <strong>General de Oro</strong>, mientras que la Torre se corona en <strong>Rey Dragón (<span lang="ja">龍</span>)</strong> y el Alfil en <strong>Caballo Dragón (<span lang="ja">馬</span>)</strong>. El motor valida además las prohibiciones oficiales de <em>Nifu</em> (dos peones en la misma columna) y <em>Uchifuzume</em>.
             </p>
           </article>
@@ -318,35 +323,35 @@
           <div class="player-header">
             <span class="player-symbol" id="top-player-symbol" aria-hidden="true">☖</span>
             <div class="player-meta">
-              <h2 id="top-player-title">Gote · Blanco</h2>
-              <p class="player-name" id="top-player-name">Esperando jugador...</p>
+              <h2 id="top-player-title" data-i18n="gote_title">Gote · Blanco</h2>
+              <p class="player-name" id="top-player-name" data-i18n="waiting_player">Esperando jugador...</p>
             </div>
-            <span class="turn-tag" id="top-turn-tag" hidden>Su turno</span>
+            <span class="turn-tag" id="top-turn-tag" data-i18n="their_turn" hidden>Su turno</span>
           </div>
           <div class="komadai" id="top-komadai" aria-label="Piezas capturadas del jugador superior">
-            <p class="komadai-title">Piezas en mano (Komadai)</p>
+            <p class="komadai-title" data-i18n="komadai_top_title">Piezas en mano (Komadai)</p>
             <div class="komadai-grid" id="top-hand-grid"></div>
           </div>
         </section>
 
         <section class="match-card" aria-labelledby="match-status-heading">
-          <h2 id="match-status-heading">Estado de la Partida</h2>
-          <div class="turn-banner" id="turn-banner" role="status" aria-live="polite">
+          <h2 id="match-status-heading" data-i18n="match_status_heading">Estado de la Partida</h2>
+          <div class="turn-banner" id="turn-banner" role="status" aria-live="polite" data-i18n="loading_game">
             Cargando partida...
           </div>
-          <div class="check-alert" id="check-alert" role="alert" hidden>
+          <div class="check-alert" id="check-alert" role="alert" data-i18n="check_alert_text" hidden>
             ¡Jaque al Rey (<span lang="ja">王手</span> - Ōte)!
           </div>
           <div class="invite-callout" id="invite-callout" hidden>
-            <p>Esperando a tu oponente. Comparte este enlace o espera a que alguien se una desde el Lobby:</p>
+            <p data-i18n="invite_waiting_text">Esperando a tu oponente. Comparte este enlace o espera a que alguien se una desde el Lobby:</p>
             <div class="invite-row">
               <input type="text" id="invite-url-input" readonly aria-label="Enlace de invitación a la sala">
-              <button type="button" class="btn btn-accent" id="btn-copy-inline">Copiar</button>
+              <button type="button" class="btn btn-accent" id="btn-copy-inline" data-i18n="btn_copy_inline">Copiar</button>
             </div>
           </div>
           <div class="match-actions">
-            <button type="button" class="btn" id="btn-reset-game">Reiniciar tablero</button>
-            <button type="button" class="btn btn-danger" id="btn-resign-game">Rendirse</button>
+            <button type="button" class="btn" id="btn-reset-game" data-i18n="btn_reset_board">Reiniciar tablero</button>
+            <button type="button" class="btn btn-danger" id="btn-resign-game" data-i18n="btn_resign">Rendirse</button>
           </div>
         </section>
       </aside>
@@ -373,9 +378,9 @@
 
           <p class="sensei-objective" id="sensei-objective"></p>
           <div class="sensei-controls">
-            <button type="button" class="btn" id="btn-tut-prev">← Lección anterior</button>
-            <button type="button" class="btn" id="btn-tut-retry">Reiniciar ejercicio</button>
-            <button type="button" class="btn btn-primary" id="btn-tut-next">Siguiente lección →</button>
+            <button type="button" class="btn" id="btn-tut-prev" data-i18n="btn_tut_prev">← Lección anterior</button>
+            <button type="button" class="btn" id="btn-tut-retry" data-i18n="btn_tut_retry">Reiniciar ejercicio</button>
+            <button type="button" class="btn btn-primary" id="btn-tut-next" data-i18n="btn_tut_next">Siguiente lección →</button>
           </div>
         </article>
 
@@ -386,7 +391,7 @@
             <div class="row-coords" id="row-coords" aria-hidden="true"></div>
           </div>
         </div>
-        <p class="board-hint" id="board-hint">
+        <p class="board-hint" id="board-hint" data-i18n="board_hint">
           Selecciona una pieza de tu bando para ver sus movimientos legales, o haz clic en una pieza capturada de tu reserva para reincorporarla.
         </p>
       </section>
@@ -397,20 +402,20 @@
           <div class="player-header">
             <span class="player-symbol" id="bottom-player-symbol" aria-hidden="true">☗</span>
             <div class="player-meta">
-              <h2 id="bottom-player-title">Sente · Negro</h2>
-              <p class="player-name" id="bottom-player-name">Esperando jugador...</p>
+              <h2 id="bottom-player-title" data-i18n="sente_title">Sente · Negro</h2>
+              <p class="player-name" id="bottom-player-name" data-i18n="waiting_player">Esperando jugador...</p>
             </div>
-            <span class="turn-tag" id="bottom-turn-tag" hidden>Tu turno</span>
+            <span class="turn-tag" id="bottom-turn-tag" data-i18n="your_turn" hidden>Tu turno</span>
           </div>
           <div class="komadai" id="bottom-komadai" aria-label="Piezas capturadas del jugador inferior">
-            <p class="komadai-title">Piezas en mano (clic para reincorporar)</p>
+            <p class="komadai-title" data-i18n="komadai_bottom_title">Piezas en mano (clic para reincorporar)</p>
             <div class="komadai-grid" id="bottom-hand-grid"></div>
           </div>
         </section>
 
         <section class="history-card" aria-labelledby="history-heading">
           <div class="history-header">
-            <h2 id="history-heading">Registro de Jugadas</h2>
+            <h2 id="history-heading" data-i18n="history_heading">Registro de Jugadas</h2>
             <span class="move-counter" id="move-counter">0 jugadas</span>
           </div>
           <ol class="history-list" id="history-list" aria-live="polite"></ol>
@@ -427,17 +432,17 @@
             <span class="footer-koma-icon" aria-hidden="true">王</span>
             <span>Shōgi Dojo Online (<span lang="ja">将棋</span>)</span>
           </div>
-          <p>
-            Plataforma web comunitaria e independiente para jugar al Shōgi (Ajedrez Tradicional Japonés) online en tiempo real para 2 jugadores, con motor de reglas oficiales en Python, Lobby de Matchmaking y Academia interactiva paso a paso en español.
+          <p data-i18n="footer_desc">
+            Plataforma web comunitaria e independiente para jugar al Shōgi (Ajedrez Tradicional Japonés) online en tiempo real para 2 jugadores, con motor de reglas oficiales en Python, Lobby de Matchmaking y Academia interactiva paso a paso en español e inglés.
           </p>
         </div>
 
         <nav class="site-footer-nav" aria-label="Enlaces legales y de información">
-          <a href="/sobre-nosotros">Sobre Nosotros &amp; Contacto</a>
-          <a href="/politica-de-privacidad">Política de Privacidad</a>
-          <a href="/terminos-de-servicio">Términos de Servicio</a>
-          <a href="/sitemap.xml">Sitemap XML</a>
-          <button type="button" class="footer-link-btn" id="btn-open-bug-footer">🐞 Reportar Error</button>
+          <a href="/sobre-nosotros" data-i18n="footer_about">Sobre Nosotros &amp; Contacto</a>
+          <a href="/politica-de-privacidad" data-i18n="footer_privacy">Política de Privacidad</a>
+          <a href="/terminos-de-servicio" data-i18n="footer_terms">Términos de Servicio</a>
+          <a href="/sitemap.xml" data-i18n="footer_sitemap">Sitemap XML</a>
+          <button type="button" class="footer-link-btn" id="btn-open-bug-footer" data-i18n="footer_bug">🐞 Reportar Error</button>
         </nav>
       </div>
 
@@ -456,63 +461,63 @@
   <dialog id="lobby-dialog" aria-labelledby="lobby-dialog-title" closedby="any">
     <div class="dialog-box">
       <div class="dialog-header">
-        <h1 id="lobby-dialog-title">Crear Nueva Sala de Shōgi</h1>
+        <h1 id="lobby-dialog-title" data-i18n="create_modal_title">Crear Nueva Sala de Shōgi</h1>
         <form method="dialog">
           <button value="close" class="btn-icon" aria-label="Cerrar ventana de creación">✕</button>
         </form>
       </div>
 
       <div class="create-form">
-        <label class="field-label" for="room-title-create">Nombre de la sala (opcional)</label>
-        <input type="text" id="room-title-create" class="text-input" placeholder="Ej. Dojo Principiantes" maxlength="36" autofocus>
+        <label class="field-label" for="room-title-create" data-i18n="room_title_label">Nombre de la sala (opcional)</label>
+        <input type="text" id="room-title-create" class="text-input" placeholder="Ej. Dojo Principiantes" data-i18n-placeholder="room_title_placeholder" maxlength="36" autofocus>
 
         <fieldset class="choice-fieldset">
-          <legend>Modo y visibilidad</legend>
+          <legend data-i18n="mode_legend">Modo y visibilidad</legend>
           <label class="radio-card">
             <input type="radio" name="game-mode" value="online-public" checked>
             <span>
-              <strong>Sala Online Pública (Visible en el Lobby)</strong>
-              <small>Cualquier jugador en el Lobby podrá unirse con un clic.</small>
+              <strong data-i18n="mode_pub_title">Sala Online Pública (Visible en el Lobby)</strong>
+              <small data-i18n="mode_pub_sub">Cualquier jugador en el Lobby podrá unirse con un clic.</small>
             </span>
           </label>
           <label class="radio-card">
             <input type="radio" name="game-mode" value="online-private">
             <span>
-              <strong>Sala Online Privada (Solo con Código / Link)</strong>
-              <small>No aparece en la lista pública; invita con el enlace directo.</small>
+              <strong data-i18n="mode_priv_title">Sala Online Privada (Solo con Código / Link)</strong>
+              <small data-i18n="mode_priv_sub">No aparece en la lista pública; invita con el enlace directo.</small>
             </span>
           </label>
           <label class="radio-card">
             <input type="radio" name="game-mode" value="ai">
             <span>
-              <strong>1 Jugador contra Sensei Bot 🤖 (IA)</strong>
-              <small>Practica una partida completa en solitario contra el bot del Dojo.</small>
+              <strong data-i18n="mode_ai_title">1 Jugador contra Sensei Bot 🤖 (IA)</strong>
+              <small data-i18n="mode_ai_sub">Practica una partida completa en solitario contra el bot del Dojo.</small>
             </span>
           </label>
           <label class="radio-card">
             <input type="radio" name="game-mode" value="local">
             <span>
-              <strong>2 Jugadores en este Dispositivo</strong>
-              <small>Turnos compartidos en la misma pantalla.</small>
+              <strong data-i18n="mode_local_title">2 Jugadores en este Dispositivo</strong>
+              <small data-i18n="mode_local_sub">Turnos compartidos en la misma pantalla.</small>
             </span>
           </label>
         </fieldset>
 
         <fieldset class="choice-fieldset" id="color-choice-group">
-          <legend>Elige tu bando inicial</legend>
+          <legend data-i18n="color_legend">Elige tu bando inicial</legend>
           <div class="radio-inline">
             <label class="radio-pill">
               <input type="radio" name="creator-color" value="negro" checked>
-              <span>☗ Sente (Negro · Empieza)</span>
+              <span data-i18n="color_sente">☗ Sente (Negro · Empieza)</span>
             </label>
             <label class="radio-pill">
               <input type="radio" name="creator-color" value="blanco">
-              <span>☖ Gote (Blanco · 2.º turno)</span>
+              <span data-i18n="color_gote">☖ Gote (Blanco · 2.º turno)</span>
             </label>
           </div>
         </fieldset>
 
-        <button type="button" class="btn btn-primary btn-block" id="btn-create-room">
+        <button type="button" class="btn btn-primary btn-block" id="btn-create-room" data-i18n="btn_create_submit">
           Crear Sala y Entrar
         </button>
         <p class="dialog-error" id="lobby-error" role="alert" hidden></p>
@@ -523,12 +528,12 @@
   <!-- Modal Nativo: Confirmar Promoción (Nari) -->
   <dialog id="promote-dialog" aria-labelledby="promote-dialog-title" closedby="none">
     <div class="dialog-box dialog-compact">
-      <h1 id="promote-dialog-title">¿Promocionar pieza (<span lang="ja">成り</span>)?</h1>
-      <p id="promote-dialog-desc">Tu pieza entró en la zona de promoción enemiga (últimas 3 filas).</p>
+      <h1 id="promote-dialog-title" data-i18n="promote_title">¿Promocionar pieza (<span lang="ja">成り</span>)?</h1>
+      <p id="promote-dialog-desc" data-i18n="promote_desc">Tu pieza entró en la zona de promoción enemiga (últimas 3 filas).</p>
       <div class="promote-preview" id="promote-preview"></div>
       <form method="dialog" class="dialog-actions">
-        <button value="no" class="btn">Mantener normal</button>
-        <button value="yes" class="btn btn-primary" autofocus>Promocionar (+)</button>
+        <button value="no" class="btn" data-i18n="btn_promote_no">Mantener normal</button>
+        <button value="yes" class="btn btn-primary" data-i18n="btn_promote_yes" autofocus>Promocionar (+)</button>
       </form>
     </div>
   </dialog>
@@ -666,6 +671,7 @@
     </div>
   </dialog>
 
-  <script src="/static/app.js?v=14" defer></script>
+  <script src="/static/i18n.js?v=1"></script>
+  <script src="/static/app.js?v=16" defer></script>
 </body>
 </html>
