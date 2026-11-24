@@ -51,14 +51,15 @@ def sanitize_text(value: str | None, max_len: int = 24, default: str = "") -> st
 
 
 class SecurityGuard:
-    """Controla Rate Limiting por IP y límite de 1 conexión SSE / 1 sesión activa por IP."""
+    """Controla Rate Limiting por IP y límite de conexiones SSE simultáneas por IP."""
+
+    MAX_SSE_PER_IP = 4
 
     def __init__(self):
         self.lock = threading.RLock()
         self.requests_by_ip: dict[str, dict[str, deque]] = defaultdict(lambda: defaultdict(deque))
-        # ip -> queue.Queue (solo 1 conexión SSE de Lobby y 1 de Sala activa por IP)
-        self.active_lobby_sse_by_ip: dict[str, queue.Queue] = {}
-        self.active_room_sse_by_ip: dict[str, queue.Queue] = {}
+        self.active_lobby_sse_by_ip: dict[str, list[queue.Queue]] = defaultdict(list)
+        self.active_room_sse_by_ip: dict[str, list[queue.Queue]] = defaultdict(list)
 
     def check_rate_limit(self, ip: str, bucket: str, max_calls: int, window_sec: int) -> bool:
         now = time.time()
@@ -73,33 +74,39 @@ class SecurityGuard:
 
     def register_lobby_sse(self, ip: str, q: queue.Queue):
         with self.lock:
-            old_q = self.active_lobby_sse_by_ip.get(ip)
-            if old_q is not None and old_q is not q:
-                try:
-                    old_q.put_nowait("__CLOSE_REPLACED_BY_SAME_IP__")
-                except queue.Full:
-                    pass
-            self.active_lobby_sse_by_ip[ip] = q
+            conns = self.active_lobby_sse_by_ip[ip]
+            while len(conns) >= self.MAX_SSE_PER_IP:
+                old_q = conns.pop(0)
+                if old_q is not q:
+                    try:
+                        old_q.put_nowait("__CLOSE_REPLACED_BY_SAME_IP__")
+                    except queue.Full:
+                        pass
+            conns.append(q)
 
     def unregister_lobby_sse(self, ip: str, q: queue.Queue):
         with self.lock:
-            if self.active_lobby_sse_by_ip.get(ip) is q:
-                del self.active_lobby_sse_by_ip[ip]
+            conns = self.active_lobby_sse_by_ip.get(ip)
+            if conns and q in conns:
+                conns.remove(q)
 
     def register_room_sse(self, ip: str, q: queue.Queue):
         with self.lock:
-            old_q = self.active_room_sse_by_ip.get(ip)
-            if old_q is not None and old_q is not q:
-                try:
-                    old_q.put_nowait("__CLOSE_REPLACED_BY_SAME_IP__")
-                except queue.Full:
-                    pass
-            self.active_room_sse_by_ip[ip] = q
+            conns = self.active_room_sse_by_ip[ip]
+            while len(conns) >= self.MAX_SSE_PER_IP:
+                old_q = conns.pop(0)
+                if old_q is not q:
+                    try:
+                        old_q.put_nowait("__CLOSE_REPLACED_BY_SAME_IP__")
+                    except queue.Full:
+                        pass
+            conns.append(q)
 
     def unregister_room_sse(self, ip: str, q: queue.Queue):
         with self.lock:
-            if self.active_room_sse_by_ip.get(ip) is q:
-                del self.active_room_sse_by_ip[ip]
+            conns = self.active_room_sse_by_ip.get(ip)
+            if conns and q in conns:
+                conns.remove(q)
 
 
 SECURITY = SecurityGuard()
@@ -609,13 +616,13 @@ def get_room_or_404(code: str) -> GameRoom | None:
 
 
 class LobbyManager:
+    MAX_PLAYERS_PER_IP = 2
+
     def __init__(self):
         self.lock = threading.RLock()
         self.subscribers: list[queue.Queue] = []
         # player_id -> {"player_id", "ip", "name", "status": "idle"|"searching", "last_seen", "match": None}
         self.players: dict[str, dict] = {}
-        # ip -> player_id (garantiza 1 sola identidad en el Lobby por IP al mismo tiempo)
-        self.ip_to_player: dict[str, str] = {}
         self.match_queue: list[str] = []
 
     def touch_player(self, player_id: str, name: str, ip: str) -> str:
@@ -623,29 +630,28 @@ class LobbyManager:
             player_id = secrets.token_hex(6)
         with self.lock:
             now = time.time()
-            # Limpiar jugadores inactivos por TTL
             stale_ids = [
                 pid
                 for pid, p in self.players.items()
                 if now - p["last_seen"] > PLAYER_IDLE_TTL_SECONDS and not p.get("match")
             ]
             for pid in stale_ids:
-                old_ip = self.players[pid].get("ip")
-                if old_ip and self.ip_to_player.get(old_ip) == pid:
-                    del self.ip_to_player[old_ip]
                 if pid in self.match_queue:
                     self.match_queue.remove(pid)
                 del self.players[pid]
 
-            # Regla de 1 conexión por IP: si esa IP ya tenía otro player_id activo, lo reemplazamos
-            existing_pid_for_ip = self.ip_to_player.get(ip)
-            if existing_pid_for_ip and existing_pid_for_ip != player_id:
-                if existing_pid_for_ip in self.match_queue:
-                    self.match_queue.remove(existing_pid_for_ip)
-                if existing_pid_for_ip in self.players and not self.players[existing_pid_for_ip].get("match"):
-                    del self.players[existing_pid_for_ip]
+            # Limitar cantidad de identidades simultáneas por IP (máx 2 para permitir 2 dispositivos en la misma red Wi-Fi / NAT)
+            same_ip_pids = [
+                pid for pid, p in self.players.items() if p.get("ip") == ip and pid != player_id
+            ]
+            same_ip_pids.sort(key=lambda pid: self.players[pid]["last_seen"])
+            while len(same_ip_pids) >= self.MAX_PLAYERS_PER_IP:
+                evict_pid = same_ip_pids.pop(0)
+                if evict_pid in self.match_queue:
+                    self.match_queue.remove(evict_pid)
+                if evict_pid in self.players and not self.players[evict_pid].get("match"):
+                    del self.players[evict_pid]
 
-            self.ip_to_player[ip] = player_id
             clean_name = sanitize_text(name, max_len=24, default=f"Samurai-{player_id[:4].upper()}")
             if player_id not in self.players:
                 self.players[player_id] = {
@@ -668,9 +674,6 @@ class LobbyManager:
             if player_id in self.match_queue:
                 self.match_queue.remove(player_id)
             if player_id in self.players:
-                p_ip = self.players[player_id].get("ip")
-                if p_ip and self.ip_to_player.get(p_ip) == player_id:
-                    del self.ip_to_player[p_ip]
                 if not self.players[player_id].get("match"):
                     del self.players[player_id]
 
@@ -1070,14 +1073,12 @@ def lobby_matchmake():
     with LOBBY.lock:
         LOBBY.players[player_id]["match"] = None
 
-        # Regla de seguridad por IP: un jugador no puede emparejarse contra su propia dirección IP
+        # Emparejar con otro jugador distinto en la cola
         opponent_id = next(
             (
                 pid
                 for pid in LOBBY.match_queue
-                if pid != player_id
-                and pid in LOBBY.players
-                and LOBBY.players[pid].get("ip") != ip
+                if pid != player_id and pid in LOBBY.players
             ),
             None,
         )
@@ -1303,17 +1304,15 @@ def join_room(room_code: str):
                 }
             )
 
-        # 1. Reconexión por token criptográfico o por misma IP ya sentada en la sala
+        # 1. Reconexión autenticada únicamente por token criptográfico (evita secuestro de asiento entre dispositivos en la misma red Wi-Fi / NAT)
         for color in ("negro", "blanco"):
             seat_token = room.players[color]["token"]
-            seat_ip = room.players[color].get("ip")
             token_matches = (
                 isinstance(existing_token, str)
                 and isinstance(seat_token, str)
                 and hmac.compare_digest(existing_token, seat_token)
             )
-            ip_matches = seat_ip == ip and room.players[color]["connected"]
-            if token_matches or ip_matches:
+            if token_matches:
                 if player_name:
                     room.players[color]["name"] = player_name
                 room.players[color]["connected"] = True
@@ -1566,11 +1565,33 @@ def make_drop(room_code: str):
 
 @app.route("/api/rooms/<room_code>/reset", methods=["POST"])
 def reset_room(room_code: str):
+    ip = get_client_ip()
+    if not SECURITY.check_rate_limit(ip, "reset_room", max_calls=10, window_sec=60):
+        return jsonify({"error": "Demasiados reinicios desde tu IP. Espera unos segundos."}), 429
+
     room = get_room_or_404(room_code)
     if not room:
         return jsonify({"error": "Sala no encontrada."}), 404
 
+    data = request.get_json(silent=True) or {}
+    token = data.get("player_token")
+
     with room.lock:
+        if room.mode in ("online", "ai"):
+            valid_player = False
+            for color in ("negro", "blanco"):
+                seat_token = room.players[color]["token"]
+                if (
+                    isinstance(token, str)
+                    and isinstance(seat_token, str)
+                    and hmac.compare_digest(token, seat_token)
+                ):
+                    valid_player = True
+                    break
+            if not valid_player:
+                return jsonify({"error": "Solo los jugadores de la partida pueden reiniciar el tablero."}), 403
+
+        room.updated_at = time.time()
         room.reset_board()
         room.broadcast()
         return jsonify({"ok": True, "state": room.serialize()})

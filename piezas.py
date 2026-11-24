@@ -10,8 +10,9 @@ class Pieza(object):
 
     def mover_pieza(self, jugador_activo, tablero, posicion_inicial, posicion_final):
         if tablero.tab[posicion_final[0]][posicion_final[1]] is None:
-            tablero.tab[posicion_final[0]][posicion_final[1]] = tablero.tab[posicion_inicial[0]][posicion_inicial[1]]
-            tablero.tab[posicion_inicial[0]][posicion_inicial[1]] = None
+            if not tablero.modo_control_tablero:
+                tablero.tab[posicion_final[0]][posicion_final[1]] = tablero.tab[posicion_inicial[0]][posicion_inicial[1]]
+                tablero.tab[posicion_inicial[0]][posicion_inicial[1]] = None
             return True
         else:
             # Si el destino está ocupado por una pieza del otro jugador se debe poner la pieza en estado muerta y cambiar el color, sino se cancela la jugada

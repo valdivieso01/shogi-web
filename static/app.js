@@ -980,12 +980,22 @@
     return state.myColor === color;
   }
 
+  function mapVisualToBoard(vi, vj) {
+    // En tablero.py (partidas reales): 'negro' inicia en filas 0..2 y avanza hacia 8; 'blanco' inicia en 6..8 y avanza hacia 0.
+    // En el tutorial: 'negro' inicia en filas 6..8 y 'blanco' en 0..2.
+    // Cuando state.flipped === false, 'negro' debe verse ABAJO (vi = 6..8) avanzando hacia ARRIBA (vi -> 0).
+    const invertMatrix = state.tutorialActive ? state.flipped : !state.flipped;
+    const r = invertMatrix ? 8 - vi : vi;
+    const c = invertMatrix ? 8 - vj : vj;
+    return { r, c };
+  }
+
   function renderCoordinates() {
     const cols = [];
     const rows = [];
     for (let i = 0; i < 9; i++) {
-      const c = state.flipped ? 8 - i : i;
-      const r = state.flipped ? 8 - i : i;
+      const { c } = mapVisualToBoard(0, i);
+      const { r } = mapVisualToBoard(i, 0);
       cols.push(`<span>${9 - c} <small>(${c})</small></span>`);
       rows.push(`<span>${KANJI_NUMS[r]}<small>${r}</small></span>`);
     }
@@ -1018,12 +1028,12 @@
     const board = state.game.board;
     const lastMove = state.game.last_move;
     const inCheckColor = state.game.in_check;
+    const bottomColor = state.flipped ? "blanco" : "negro";
     const fragment = document.createDocumentFragment();
 
     for (let vi = 0; vi < 9; vi++) {
       for (let vj = 0; vj < 9; vj++) {
-        const r = state.flipped ? 8 - vi : vi;
-        const c = state.flipped ? 8 - vj : vj;
+        const { r, c } = mapVisualToBoard(vi, vj);
         const piece = board[r][c];
 
         const cell = document.createElement("button");
@@ -1071,7 +1081,8 @@
         }
 
         if (piece) {
-          const pointsDown = state.flipped ? piece.color === "negro" : piece.color === "blanco";
+          // El jugador ubicado abajo (bottomColor) siempre apunta hacia arriba (hacia el rival); el de arriba apunta hacia abajo
+          const pointsDown = piece.color !== bottomColor;
           cell.innerHTML = createKomaHTML(piece, pointsDown);
           cell.setAttribute(
             "aria-label",
@@ -1143,8 +1154,9 @@
         const canDrop = canControlColor(color);
         btn.disabled = !canDrop;
         btn.setAttribute("aria-label", `Reincorporar ${item.es} (${item.count} disponible)`);
+        const handPointsDown = prefix === "top";
         btn.innerHTML = `
-          ${createKomaHTML({ ...item, display_code: item.code, promoted: false }, false)}
+          ${createKomaHTML({ ...item, display_code: item.code, promoted: false }, handPointsDown)}
           <span class="hand-count">${item.count}</span>
         `;
         btn.addEventListener("click", () => onHandPieceClick(color, item.code));
@@ -1199,9 +1211,13 @@
     }
 
     moveCounter.textContent = `${state.game.move_count} ${state.game.move_count === 1 ? "jugada" : "jugadas"}`;
-    const items = (state.game.history || []).map((h) => `<li>${h.notation}</li>`).join("");
+    const items = (state.game.history || []).map((h) => `<li>${escapeHTML(h.notation)}</li>`).join("");
     historyList.innerHTML = items || `<li>Sin movimientos todavía</li>`;
     historyList.scrollTop = historyList.scrollHeight;
+
+    const isSpectator = state.myColor === "espectador";
+    document.getElementById("btn-reset-game").hidden = isSpectator;
+    document.getElementById("btn-resign-game").hidden = isSpectator || state.tutorialActive;
   }
 
   function renderGameAll() {
@@ -1916,9 +1932,27 @@
   btnCopyLink.addEventListener("click", () => copyInviteLink(btnCopyLink));
   btnCopyInline.addEventListener("click", () => copyInviteLink(btnCopyInline));
 
+  promoteDialog.addEventListener("cancel", (e) => {
+    e.preventDefault();
+  });
+
   document.getElementById("btn-reset-game").addEventListener("click", async () => {
+    if (state.tutorialActive) {
+      loadTutorialStep(state.tutorialStep);
+      return;
+    }
     if (!state.roomCode) return;
-    await fetch(`/api/rooms/${state.roomCode}/reset`, { method: "POST" });
+    const res = await fetch(`/api/rooms/${state.roomCode}/reset`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ player_token: state.playerToken }),
+    });
+    const data = await res.json();
+    if (res.ok && data.state) {
+      clearSelection();
+      state.game = data.state;
+      renderGameAll();
+    }
   });
 
   document.getElementById("btn-resign-game").addEventListener("click", async () => {

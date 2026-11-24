@@ -150,6 +150,7 @@ class Tablero(object):
                                 and self.tab[fila + 1][columna].__class__ == Rey
                                 and jugador.verificar_jaque(jugador, tablero) is True
                                 and jugador.verificar_jaque_mate(jugador, tablero) is True
+                                and not self._defensor_puede_capturar(jugador, fila, columna)
                             )
                             if not es_uchifuzume:
                                 return True
@@ -175,6 +176,7 @@ class Tablero(object):
                                 and self.tab[fila - 1][columna].__class__ == Rey
                                 and jugador.verificar_jaque(jugador, tablero) is True
                                 and jugador.verificar_jaque_mate(jugador, tablero) is True
+                                and not self._defensor_puede_capturar(jugador, fila, columna)
                             )
                             if not es_uchifuzume:
                                 return True
@@ -211,6 +213,27 @@ class Tablero(object):
                 # Si es cualquier otra pieza, no tiene restricciones
                 else:
                     return self.reintroducir(i, fila, columna)
+        return False
+
+    def _defensor_puede_capturar(self, atacante, fila_peon, col_peon):
+        color_defensor = 'blanco' if atacante.color == 'negro' else 'negro'
+        peon_colocado = self.tab[fila_peon][col_peon]
+        for r in range(9):
+            for c in range(9):
+                pieza_def = self.tab[r][c]
+                if pieza_def is not None and pieza_def.color == color_defensor and pieza_def.__class__ != Rey:
+                    self.modo_control_tablero = True
+                    puede_ir = atacante.jugar_pieza(self, color_defensor, (r, c), (fila_peon, col_peon))
+                    self.modo_control_tablero = False
+                    if puede_ir:
+                        # Simular captura para comprobar que el rey defensor no quede en jaque
+                        self.tab[fila_peon][col_peon] = pieza_def
+                        self.tab[r][c] = None
+                        sigue_en_jaque = atacante.verificar_jaque(atacante, self)
+                        self.tab[r][c] = pieza_def
+                        self.tab[fila_peon][col_peon] = peon_colocado
+                        if not sigue_en_jaque:
+                            return True
         return False
 
     def reintroducir(self, pieza, fila, columna):
