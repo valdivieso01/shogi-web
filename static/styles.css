@@ -1870,6 +1870,26 @@ dialog::backdrop {
   border-radius: 999px;
 }
 
+.btn-admin-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: linear-gradient(135deg, #d4af37, #f39c12);
+  color: #1a0f07 !important;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  text-decoration: none !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.btn-admin-pill:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.15);
+}
+
 .user-avatar-top {
   border-radius: 50%;
   object-fit: cover;

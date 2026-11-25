@@ -26,6 +26,23 @@ app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
 
 AUTH_SESSIONS = {}  # token -> user_dict
 
+ADMIN_EMAILS = set(
+    filter(
+        None,
+        [
+            e.strip().lower()
+            for e in (os.environ.get("ADMIN_EMAILS", "hjavier.valdivieso@gmail.com,hjavier.valdivieso@outlook.es").split(","))
+        ],
+    )
+)
+
+
+def is_admin_user(user: Optional[Dict[str, Any]]) -> bool:
+    if not user:
+        return False
+    email = (user.get("email") or "").strip().lower()
+    return bool(email and email in ADMIN_EMAILS)
+
 
 def get_authenticated_user(req, token: str | None = None) -> dict | None:
     auth_header = req.headers.get("Authorization", "")
@@ -33,8 +50,17 @@ def get_authenticated_user(req, token: str | None = None) -> dict | None:
         token = auth_header[7:].strip()
     if not token:
         token = req.args.get("auth_token") or req.cookies.get("shogi_auth_token")
-    if token and token in AUTH_SESSIONS:
-        return AUTH_SESSIONS[token]
+    if token:
+        if token in AUTH_SESSIONS:
+            user = AUTH_SESSIONS[token]
+            user["is_admin"] = is_admin_user(user)
+            return user
+        # Check persistent database session
+        user = database.get_user_by_session(token)
+        if user:
+            user["is_admin"] = is_admin_user(user)
+            AUTH_SESSIONS[token] = user
+            return user
     return None
 
 # ==========================================
@@ -1430,6 +1456,8 @@ def auth_google():
 
     user = database.upsert_user(google_id, email or "", name, picture)
     token = secrets.token_hex(24)
+    database.save_session(token, user["id"])
+    user["is_admin"] = is_admin_user(user)
     AUTH_SESSIONS[token] = user
 
     response = jsonify({"ok": True, "token": token, "user": user})
@@ -1444,6 +1472,7 @@ def auth_me():
         refreshed = database.get_user_by_id(user["id"])
         if refreshed:
             user = refreshed
+            user["is_admin"] = is_admin_user(user)
             # Update memory session
             token = request.headers.get("Authorization", "").replace("Bearer ", "").strip() or request.cookies.get("shogi_auth_token")
             if token:
@@ -1457,8 +1486,10 @@ def auth_logout():
     token = request.headers.get("Authorization", "").replace("Bearer ", "").strip()
     if not token:
         token = request.cookies.get("shogi_auth_token")
-    if token and token in AUTH_SESSIONS:
-        del AUTH_SESSIONS[token]
+    if token:
+        database.delete_session(token)
+        if token in AUTH_SESSIONS:
+            del AUTH_SESSIONS[token]
     resp = jsonify({"ok": True})
     resp.delete_cookie("shogi_auth_token")
     return resp
@@ -1476,6 +1507,433 @@ def api_recent_matches():
     limit = min(30, max(5, int(request.args.get("limit", 10))))
     data = database.get_recent_matches(limit=limit)
     return jsonify({"matches": data})
+
+
+@app.route("/api/admin/overview", methods=["GET"])
+def api_admin_overview():
+    user = get_authenticated_user(request)
+    if not user or not is_admin_user(user):
+        return jsonify({"error": "Acceso denegado. Se requieren permisos de administrador."}), 403
+    stats = database.get_admin_overview()
+    stats["active_rooms"] = len(ROOMS)
+    return jsonify({"ok": True, "stats": stats})
+
+
+@app.route("/api/admin/matches", methods=["GET"])
+def api_admin_matches():
+    user = get_authenticated_user(request)
+    if not user or not is_admin_user(user):
+        return jsonify({"error": "Acceso denegado. Se requieren permisos de administrador."}), 403
+    limit = min(200, max(10, int(request.args.get("limit", 100))))
+    offset = max(0, int(request.args.get("offset", 0)))
+    matches = database.get_admin_matches(limit=limit, offset=offset)
+    return jsonify({"ok": True, "matches": matches})
+
+
+@app.route("/api/admin/users", methods=["GET"])
+def api_admin_users():
+    user = get_authenticated_user(request)
+    if not user or not is_admin_user(user):
+        return jsonify({"error": "Acceso denegado. Se requieren permisos de administrador."}), 403
+    limit = min(200, max(10, int(request.args.get("limit", 100))))
+    offset = max(0, int(request.args.get("offset", 0)))
+    users = database.get_admin_users(limit=limit, offset=offset)
+    return jsonify({"ok": True, "users": users})
+
+
+@app.route("/admin")
+def page_admin():
+    html = """<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Administración | Dojo Shōgi Online</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="stylesheet" href="/static/styles.css?v=17">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    .admin-container { max-width: 1200px; margin: 1.5rem auto 3.5rem; padding: 0 1rem; }
+    .admin-header-card {
+      background: #231913; border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 12px;
+      padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .admin-title-wrap h1 { font-size: 1.4rem; color: #f1c40f; margin: 0 0 0.25rem; display: flex; align-items: center; gap: 0.5rem; }
+    .admin-title-wrap p { color: #a89f91; margin: 0; font-size: 0.85rem; }
+    .admin-actions { display: flex; align-items: center; gap: 0.75rem; }
+    .admin-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.75rem; }
+    .kpi-card {
+      background: #231913; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+      padding: 1.1rem; display: flex; flex-direction: column; gap: 0.35rem; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      position: relative; overflow: hidden;
+    }
+    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #d4af37, #f39c12); }
+    .kpi-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #a89f91; }
+    .kpi-value { font-size: 1.85rem; font-weight: 800; color: #fff; line-height: 1.1; }
+    .kpi-sub { font-size: 0.75rem; color: #8e8577; }
+    .admin-tabs { display: flex; gap: 0.5rem; border-bottom: 2px solid rgba(212, 175, 55, 0.2); margin-bottom: 1.25rem; }
+    .admin-tab-btn {
+      background: transparent; border: none; color: #a89f91; font-size: 0.95rem; font-weight: 600;
+      padding: 0.6rem 1.25rem; cursor: pointer; border-radius: 8px 8px 0 0; transition: all 0.2s;
+    }
+    .admin-tab-btn.active { color: #fff; background: rgba(212, 175, 55, 0.15); border-bottom: 2px solid #f1c40f; }
+    .admin-panel { background: #231913; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1.25rem; box-shadow: 0 6px 18px rgba(0,0,0,0.3); }
+    .table-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
+    .table-search-input {
+      background: #18110c; border: 1px solid rgba(255,255,255,0.15); color: #fff;
+      padding: 0.45rem 0.8rem; border-radius: 6px; font-size: 0.85rem; width: 280px; max-width: 100%;
+    }
+    .table-responsive { width: 100%; overflow-x: auto; }
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; text-align: left; }
+    .admin-table th { background: #18110c; color: #f1c40f; padding: 0.7rem 0.6rem; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; }
+    .admin-table td { padding: 0.65rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #e0d8cc; vertical-align: middle; }
+    .admin-table tr:hover td { background: rgba(255,255,255,0.03); }
+    .player-badge-cell { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .user-avatar-mini { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(212,175,55,0.4); }
+    .badge-win { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+    .badge-win-sente { background: #2c3e50; color: #fff; border: 1px solid #34495e; }
+    .badge-win-gote { background: #555; color: #fff; border: 1px solid #777; }
+    .auth-gate-box {
+      text-align: center; padding: 3rem 1.5rem; background: #231913; border: 1px solid rgba(212,175,55,0.25);
+      border-radius: 12px; max-width: 480px; margin: 4rem auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .auth-gate-box h2 { color: #f1c40f; margin-bottom: 0.75rem; }
+    .auth-gate-box p { color: #a89f91; font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.5rem; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-koma" aria-hidden="true">王</span>
+      <div>
+        <h1>Shōgi <span lang="ja">将棋</span></h1>
+        <p class="subtitle">Panel de Control &amp; Auditoría del Dojo</p>
+      </div>
+    </div>
+    <div class="room-bar">
+      <a href="/" class="btn" style="text-decoration:none;">← Volver al Dojo</a>
+    </div>
+  </header>
+
+  <main class="admin-container">
+    <div id="auth-gate" class="auth-gate-box" style="display:none;">
+      <h2>🛡️ Acceso Restringido</h2>
+      <p>Este panel es exclusivo para administradores de <strong>Dojo Shōgi Online</strong>. Para consultar las estadísticas y registros, inicia sesión con tu cuenta autorizada.</p>
+      <div id="admin-google-btn-slot" style="display:flex; justify-content:center;"></div>
+    </div>
+
+    <div id="admin-content" style="display:none;">
+      <div class="admin-header-card">
+        <div class="admin-title-wrap">
+          <h1>🛡️ Panel de Administración y Métricas</h1>
+          <p>Supervisión en tiempo real de partidas disputadas, jugadores registrados y balance de juego.</p>
+        </div>
+        <div class="admin-actions">
+          <div id="admin-user-pill" style="display:inline-flex; align-items:center; gap:0.5rem; background:rgba(212,175,55,0.15); padding:0.3rem 0.75rem; border-radius:999px; font-size:0.82rem; border:1px solid rgba(212,175,55,0.3);">
+            <img id="admin-avatar" src="" alt="Admin" style="width:24px; height:24px; border-radius:50%;">
+            <span id="admin-name" style="font-weight:700; color:#fff;"></span>
+          </div>
+          <button type="button" class="btn btn-primary" id="btn-refresh-admin">🔄 Refrescar</button>
+        </div>
+      </div>
+
+      <div class="admin-kpi-grid">
+        <div class="kpi-card">
+          <span class="kpi-label">👥 Jugadores Registrados</span>
+          <span class="kpi-value" id="kpi-users">-</span>
+          <span class="kpi-sub">Cuentas con Google OAuth</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">⚔️ Partidas Totales</span>
+          <span class="kpi-value" id="kpi-matches">-</span>
+          <span class="kpi-sub">Disputadas en el Dojo</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">☗ Sente vs ☖ Gote</span>
+          <span class="kpi-value" id="kpi-sides">-</span>
+          <span class="kpi-sub" id="kpi-sides-sub">Victorias de cada bando</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">🎯 Jaque Mate / Rendición</span>
+          <span class="kpi-value" id="kpi-reasons">-</span>
+          <span class="kpi-sub" id="kpi-reasons-sub">Motivo de finalización</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">⏱️ Promedio Movimientos</span>
+          <span class="kpi-value" id="kpi-moves">-</span>
+          <span class="kpi-sub">Jugadas por partida</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">🟢 Salas Activas</span>
+          <span class="kpi-value" id="kpi-rooms">-</span>
+          <span class="kpi-sub">En servidor en este instante</span>
+        </div>
+      </div>
+
+      <div class="admin-tabs">
+        <button type="button" class="admin-tab-btn active" data-tab="matches">📜 Registro de Partidas (<span id="matches-count-tab">0</span>)</button>
+        <button type="button" class="admin-tab-btn" data-tab="users">👥 Usuarios Registrados (<span id="users-count-tab">0</span>)</button>
+      </div>
+
+      <!-- PANEL DE PARTIDAS -->
+      <div class="admin-panel" id="panel-matches">
+        <div class="table-toolbar">
+          <h2 style="font-size:1.1rem; color:#f1c40f; margin:0;">Registro Histórico de Partidas</h2>
+          <input type="search" id="search-matches" class="table-search-input" placeholder="🔍 Filtrar por sala o jugador...">
+        </div>
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th># ID</th>
+                <th>Fecha</th>
+                <th>Sala</th>
+                <th>☗ Sente (Negro)</th>
+                <th>☖ Gote (Blanco)</th>
+                <th>Ganador</th>
+                <th>Finalización</th>
+                <th>Movs</th>
+              </tr>
+            </thead>
+            <tbody id="matches-tbody">
+              <tr><td colspan="8" style="text-align:center; padding:2rem;">Cargando partidas...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PANEL DE USUARIOS -->
+      <div class="admin-panel" id="panel-users" style="display:none;">
+        <div class="table-toolbar">
+          <h2 style="font-size:1.1rem; color:#f1c40f; margin:0;">Directorio de Jugadores</h2>
+          <input type="search" id="search-users" class="table-search-input" placeholder="🔍 Filtrar por nombre o email...">
+        </div>
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th># ID</th>
+                <th>Jugador</th>
+                <th>Email Google</th>
+                <th>Rating ELO</th>
+                <th>Victorias</th>
+                <th>Derrotas</th>
+                <th>Winrate</th>
+                <th>Registrado</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody">
+              <tr><td colspan="8" style="text-align:center; padding:2rem;">Cargando usuarios...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let allMatches = [];
+    let allUsers = [];
+
+    async function initAdmin() {
+      try {
+        const authRes = await fetch("/api/auth/me");
+        const authData = await authRes.json();
+        if (!authData.authenticated || !authData.user || !authData.user.is_admin) {
+          showAuthGate();
+          return;
+        }
+        showDashboard(authData.user);
+        loadAdminData();
+      } catch (err) {
+        showAuthGate();
+      }
+    }
+
+    async function showAuthGate() {
+      document.getElementById("auth-gate").style.display = "block";
+      document.getElementById("admin-content").style.display = "none";
+      try {
+        const confRes = await fetch("/api/auth/config");
+        const conf = await confRes.json();
+        if (conf.google_client_id && window.google && window.google.accounts) {
+          google.accounts.id.initialize({
+            client_id: conf.google_client_id,
+            callback: handleGoogleAuth
+          });
+          google.accounts.id.renderButton(document.getElementById("admin-google-btn-slot"), {
+            theme: "filled_blue", size: "large", text: "signin_with", shape: "pill"
+          });
+        }
+      } catch (_) {}
+    }
+
+    async function handleGoogleAuth(resp) {
+      if (!resp.credential) return;
+      const res = await fetch("/api/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential: resp.credential })
+      });
+      const data = await res.json();
+      if (data.ok && data.user && data.user.is_admin) {
+        window.location.reload();
+      } else {
+        alert("La cuenta conectada (" + (data.user ? data.user.email : "") + ") no tiene permisos de administrador.");
+      }
+    }
+
+    function showDashboard(user) {
+      document.getElementById("auth-gate").style.display = "none";
+      document.getElementById("admin-content").style.display = "block";
+      document.getElementById("admin-name").textContent = user.name || user.email;
+      if (user.picture) {
+        document.getElementById("admin-avatar").src = user.picture;
+      } else {
+        document.getElementById("admin-avatar").style.display = "none";
+      }
+    }
+
+    async function loadAdminData() {
+      try {
+        const [ovRes, matchesRes, usersRes] = await Promise.all([
+          fetch("/api/admin/overview"),
+          fetch("/api/admin/matches?limit=200"),
+          fetch("/api/admin/users?limit=200")
+        ]);
+        const ov = await ovRes.json();
+        const m = await matchesRes.json();
+        const u = await usersRes.json();
+
+        if (ov.ok) renderKPIs(ov.stats);
+        if (m.ok) {
+          allMatches = m.matches || [];
+          document.getElementById("matches-count-tab").textContent = allMatches.length;
+          renderMatchesTable(allMatches);
+        }
+        if (u.ok) {
+          allUsers = u.users || [];
+          document.getElementById("users-count-tab").textContent = allUsers.length;
+          renderUsersTable(allUsers);
+        }
+      } catch (e) {
+        console.error("Error loading admin data:", e);
+      }
+    }
+
+    function renderKPIs(s) {
+      document.getElementById("kpi-users").textContent = s.total_users;
+      document.getElementById("kpi-matches").textContent = s.total_matches;
+      document.getElementById("kpi-sides").textContent = s.sente_wins + " / " + s.gote_wins;
+      const totalSide = s.sente_wins + s.gote_wins;
+      const sentePct = totalSide > 0 ? Math.round((s.sente_wins * 100) / totalSide) : 50;
+      document.getElementById("kpi-sides-sub").textContent = `☗ Sente: ${sentePct}% · ☖ Gote: ${100 - sentePct}%`;
+
+      document.getElementById("kpi-reasons").textContent = s.checkmate_count + " / " + s.resignation_count;
+      document.getElementById("kpi-reasons-sub").textContent = "Jaque Mate / Rendición";
+      document.getElementById("kpi-moves").textContent = s.avg_moves;
+      document.getElementById("kpi-rooms").textContent = s.active_rooms || 0;
+    }
+
+    function renderMatchesTable(list) {
+      const tbody = document.getElementById("matches-tbody");
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:#888;">No hay partidas registradas todavía.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(m => {
+        const winnerBadge = m.winner_color === "negro"
+          ? '<span class="badge-win badge-win-sente">☗ Sente (' + escapeHtml(m.sente_name) + ')</span>'
+          : (m.winner_color === "blanco"
+            ? '<span class="badge-win badge-win-gote">☖ Gote (' + escapeHtml(m.gote_name) + ')</span>'
+            : '<span class="badge-win">Tablas</span>');
+        const reason = m.end_reason === "checkmate" ? "⚔️ Jaque Mate" : (m.end_reason === "resignation" ? "🏳️ Rendición" : escapeHtml(m.end_reason || "Normal"));
+        const dateStr = m.played_at ? m.played_at.substring(0, 16).replace("T", " ") : "-";
+        const senteAvatar = m.sente_picture ? `<img src="${m.sente_picture}" class="user-avatar-mini" alt="">` : '';
+        const goteAvatar = m.gote_picture ? `<img src="${m.gote_picture}" class="user-avatar-mini" alt="">` : '';
+
+        return `<tr>
+          <td><strong>#${m.id}</strong></td>
+          <td style="white-space:nowrap; font-size:0.78rem; color:#a89f91;">${dateStr}</td>
+          <td><code>${escapeHtml(m.room_code || "-")}</code></td>
+          <td><span class="player-badge-cell">${senteAvatar} <strong>${escapeHtml(m.sente_name)}</strong></span></td>
+          <td><span class="player-badge-cell">${goteAvatar} <strong>${escapeHtml(m.gote_name)}</strong></span></td>
+          <td>${winnerBadge}</td>
+          <td>${reason}</td>
+          <td><strong>${m.move_count || 0}</strong></td>
+        </tr>`;
+      }).join("");
+    }
+
+    function renderUsersTable(list) {
+      const tbody = document.getElementById("users-tbody");
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:#888;">No hay usuarios registrados todavía.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(u => {
+        const avatar = u.picture ? `<img src="${u.picture}" class="user-avatar-mini" alt="">` : '';
+        const dateStr = u.created_at ? u.created_at.substring(0, 10) : "-";
+        return `<tr>
+          <td><strong>#${u.id}</strong></td>
+          <td><span class="player-badge-cell">${avatar} <strong>${escapeHtml(u.name)}</strong></span></td>
+          <td style="color:#a89f91;">${escapeHtml(u.email || "-")}</td>
+          <td><span style="font-weight:700; color:#f1c40f;">${u.rating || 1200} pts</span></td>
+          <td style="color:#2ecc71;"><strong>${u.wins || 0}</strong></td>
+          <td style="color:#e74c3c;"><strong>${u.losses || 0}</strong></td>
+          <td><strong>${u.win_rate != null ? u.win_rate + '%' : '-'}</strong></td>
+          <td style="font-size:0.78rem; color:#8e8577;">${dateStr}</td>
+        </tr>`;
+      }).join("");
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    // Tabs switching
+    document.querySelectorAll(".admin-tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".admin-tab-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const tab = btn.dataset.tab;
+        document.getElementById("panel-matches").style.display = tab === "matches" ? "block" : "none";
+        document.getElementById("panel-users").style.display = tab === "users" ? "block" : "none";
+      });
+    });
+
+    // Real-time filters
+    document.getElementById("search-matches").addEventListener("input", (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const filtered = allMatches.filter(m =>
+        (m.room_code || "").toLowerCase().includes(q) ||
+        (m.sente_name || "").toLowerCase().includes(q) ||
+        (m.gote_name || "").toLowerCase().includes(q)
+      );
+      renderMatchesTable(filtered);
+    });
+
+    document.getElementById("search-users").addEventListener("input", (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const filtered = allUsers.filter(u =>
+        (u.name || "").toLowerCase().includes(q) ||
+        (u.email || "").toLowerCase().includes(q)
+      );
+      renderUsersTable(filtered);
+    });
+
+    document.getElementById("btn-refresh-admin").addEventListener("click", () => {
+      loadAdminData();
+    });
+
+    window.addEventListener("DOMContentLoaded", initAdmin);
+  </script>
+</body>
+</html>"""
+    return Response(html, mimetype="text/html")
 
 
 @app.route("/api/lobby", methods=["GET"])

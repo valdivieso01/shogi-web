@@ -2347,6 +2347,7 @@
   }
 
   function updateAuthUI(user) {
+    const btnAdmin = document.getElementById("btn-admin-topbar");
     if (user) {
       if (btnGoogleLogin) btnGoogleLogin.hidden = true;
       if (userProfileWidget) {
@@ -2355,9 +2356,11 @@
         userNameTop.textContent = user.name;
         userRatingTop.textContent = `${user.rating || 1200} pts`;
       }
+      if (btnAdmin) btnAdmin.hidden = !user.is_admin;
     } else {
       if (btnGoogleLogin) btnGoogleLogin.hidden = false;
       if (userProfileWidget) userProfileWidget.hidden = true;
+      if (btnAdmin) btnAdmin.hidden = true;
     }
   }
 

@@ -142,6 +142,11 @@ def init_db():
                     move_count INTEGER DEFAULT 0,
                     played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
+                CREATE TABLE IF NOT EXISTS sessions (
+                    token VARCHAR(64) PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
                 """)
             else:
                 cur.execute("""
@@ -177,6 +182,14 @@ def init_db():
                     FOREIGN KEY (sente_user_id) REFERENCES users(id),
                     FOREIGN KEY (gote_user_id) REFERENCES users(id),
                     FOREIGN KEY (winner_user_id) REFERENCES users(id)
+                );
+                """)
+                cur.execute("""
+                CREATE TABLE IF NOT EXISTS sessions (
+                    token TEXT PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
                 );
                 """)
             conn.commit()
@@ -343,3 +356,86 @@ def get_recent_matches(limit: int = 10) -> List[Dict[str, Any]]:
     LIMIT ?
     """
     return _run_query(query, (limit,), fetch_all=True) or []
+
+
+def save_session(token: str, user_id: int):
+    """Persists auth token so sessions survive serverless cold starts."""
+    if _IS_POSTGRES:
+        _run_query(
+            "INSERT INTO sessions (token, user_id) VALUES (?, ?) ON CONFLICT (token) DO UPDATE SET user_id = EXCLUDED.user_id",
+            (token, user_id),
+        )
+    else:
+        _run_query("INSERT OR REPLACE INTO sessions (token, user_id) VALUES (?, ?)", (token, user_id))
+
+
+def get_user_by_session(token: str) -> Optional[Dict[str, Any]]:
+    """Retrieves user profile associated with a session token."""
+    query = """
+    SELECT u.id, u.google_id, u.email, u.name, u.picture, u.rating, u.wins, u.losses, u.draws, u.created_at
+    FROM users u
+    JOIN sessions s ON u.id = s.user_id
+    WHERE s.token = ?
+    """
+    return _run_query(query, (token,), fetch_one=True)
+
+
+def delete_session(token: str):
+    """Removes a session token on logout."""
+    _run_query("DELETE FROM sessions WHERE token = ?", (token,))
+
+
+def get_admin_overview() -> Dict[str, Any]:
+    """Calculates all key metrics and statistics for the Admin Dashboard."""
+    users_cnt = (_run_query("SELECT COUNT(*) AS cnt FROM users", fetch_one=True) or {}).get("cnt", 0)
+    matches_cnt = (_run_query("SELECT COUNT(*) AS cnt FROM matches", fetch_one=True) or {}).get("cnt", 0)
+    sente_wins = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE winner_color = 'negro'", fetch_one=True) or {}).get("cnt", 0)
+    gote_wins = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE winner_color = 'blanco'", fetch_one=True) or {}).get("cnt", 0)
+    draws = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE winner_color = 'tablas'", fetch_one=True) or {}).get("cnt", 0)
+    checkmate = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE end_reason = 'checkmate'", fetch_one=True) or {}).get("cnt", 0)
+    resignation = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE end_reason = 'resignation'", fetch_one=True) or {}).get("cnt", 0)
+    avg_moves_row = _run_query("SELECT AVG(move_count) AS avg_m FROM matches", fetch_one=True) or {}
+    avg_moves = round(float(avg_moves_row.get("avg_m") or 0), 1)
+
+    return {
+        "total_users": users_cnt,
+        "total_matches": matches_cnt,
+        "sente_wins": sente_wins,
+        "gote_wins": gote_wins,
+        "draws": draws,
+        "checkmate_count": checkmate,
+        "resignation_count": resignation,
+        "avg_moves": avg_moves,
+    }
+
+
+def get_admin_matches(limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+    """Returns detailed historical match records for Admin analysis."""
+    query = """
+    SELECT m.id, m.room_code, m.sente_name, m.gote_name,
+           m.sente_picture, m.gote_picture, m.winner_color,
+           m.winner_user_id, m.end_reason, m.move_count, m.played_at,
+           CASE WHEN m.winner_color = 'negro' THEN m.sente_name
+                WHEN m.winner_color = 'blanco' THEN m.gote_name
+                ELSE 'Tablas' END AS winner_name
+    FROM matches m
+    ORDER BY m.id DESC
+    LIMIT ? OFFSET ?
+    """
+    return _run_query(query, (limit, offset), fetch_all=True) or []
+
+
+def get_admin_users(limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+    """Returns complete list of registered users for Admin overview."""
+    query = """
+    SELECT id, google_id, email, name, picture, rating, wins, losses, draws,
+           (wins + losses + draws) AS total_games,
+           CASE WHEN (wins + losses) > 0
+                THEN ROUND((wins * 100.0) / (wins + losses), 1)
+                ELSE 0.0 END AS win_rate,
+           created_at, updated_at
+    FROM users
+    ORDER BY id DESC
+    LIMIT ? OFFSET ?
+    """
+    return _run_query(query, (limit, offset), fetch_all=True) or []
