@@ -8,7 +8,15 @@ import sqlite3
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
+DATABASE_URL = (
+    os.environ.get("DATABASE_URL")
+    or os.environ.get("POSTGRES_URL")
+    or os.environ.get("STORAGE_URL")
+    or os.environ.get("POSTGRES_PRISMA_URL")
+    or os.environ.get("STORAGE_DATABASE_URL")
+    or os.environ.get("POSTGRES_URL_NON_POOLING")
+    or ""
+)
 
 _IS_POSTGRES = False
 _PG_MODULE = None
@@ -28,7 +36,11 @@ if DATABASE_URL and (DATABASE_URL.startswith("postgres://") or DATABASE_URL.star
         except ImportError:
             _IS_POSTGRES = False
 
-SQLITE_PATH = os.path.join(os.path.dirname(__file__), "shogi.db")
+# On serverless (Vercel / Lambda), bundle directory is read-only; use /tmp for SQLite fallback
+if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or os.path.exists("/tmp"):
+    SQLITE_PATH = "/tmp/shogi.db"
+else:
+    SQLITE_PATH = os.path.join(os.path.dirname(__file__), "shogi.db")
 
 
 def get_connection():
@@ -41,9 +53,24 @@ def get_connection():
             return psycopg2.connect(url)
         elif _PG_MODULE == "pg8000":
             import pg8000.dbapi
-            # Parse URL for pg8000 if needed
-            return pg8000.dbapi.connect(DATABASE_URL)
-    conn = sqlite3.connect(SQLITE_PATH)
+            import urllib.parse
+            import ssl
+            p = urllib.parse.urlparse(url)
+            use_ssl = "neon.tech" in (p.hostname or "") or "sslmode=require" in url
+            ssl_ctx = ssl.create_default_context() if use_ssl else None
+            return pg8000.dbapi.connect(
+                user=p.username,
+                password=p.password,
+                host=p.hostname,
+                port=p.port or 5432,
+                database=p.path.lstrip("/"),
+                ssl_context=ssl_ctx,
+            )
+    try:
+        conn = sqlite3.connect(SQLITE_PATH)
+    except Exception:
+        # Fallback to in-memory if even filesystem fails
+        conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -81,80 +108,83 @@ def _run_query(query: str, params: tuple = (), fetch_one: bool = False, fetch_al
 
 
 def init_db():
-    conn = get_connection()
     try:
-        cur = conn.cursor()
-        if _IS_POSTGRES:
-            cur.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                google_id VARCHAR(128) UNIQUE NOT NULL,
-                email VARCHAR(255),
-                name VARCHAR(128) NOT NULL,
-                picture VARCHAR(512),
-                rating INTEGER DEFAULT 1200,
-                wins INTEGER DEFAULT 0,
-                losses INTEGER DEFAULT 0,
-                draws INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-            CREATE TABLE IF NOT EXISTS matches (
-                id SERIAL PRIMARY KEY,
-                room_code VARCHAR(32),
-                sente_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-                gote_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-                sente_name VARCHAR(128) NOT NULL,
-                gote_name VARCHAR(128) NOT NULL,
-                sente_picture VARCHAR(512),
-                gote_picture VARCHAR(512),
-                winner_color VARCHAR(16) NOT NULL,
-                winner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-                end_reason VARCHAR(64),
-                move_count INTEGER DEFAULT 0,
-                played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-            """)
-        else:
-            cur.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                google_id TEXT UNIQUE NOT NULL,
-                email TEXT,
-                name TEXT NOT NULL,
-                picture TEXT,
-                rating INTEGER DEFAULT 1200,
-                wins INTEGER DEFAULT 0,
-                losses INTEGER DEFAULT 0,
-                draws INTEGER DEFAULT 0,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-            """)
-            cur.execute("""
-            CREATE TABLE IF NOT EXISTS matches (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                room_code TEXT,
-                sente_user_id INTEGER,
-                gote_user_id INTEGER,
-                sente_name TEXT NOT NULL,
-                gote_name TEXT NOT NULL,
-                sente_picture TEXT,
-                gote_picture TEXT,
-                winner_color TEXT NOT NULL,
-                winner_user_id INTEGER,
-                end_reason TEXT,
-                move_count INTEGER DEFAULT 0,
-                played_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (sente_user_id) REFERENCES users(id),
-                FOREIGN KEY (gote_user_id) REFERENCES users(id),
-                FOREIGN KEY (winner_user_id) REFERENCES users(id)
-            );
-            """)
-        conn.commit()
-        cur.close()
-    finally:
-        conn.close()
+        conn = get_connection()
+        try:
+            cur = conn.cursor()
+            if _IS_POSTGRES:
+                cur.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    google_id VARCHAR(128) UNIQUE NOT NULL,
+                    email VARCHAR(255),
+                    name VARCHAR(128) NOT NULL,
+                    picture VARCHAR(512),
+                    rating INTEGER DEFAULT 1200,
+                    wins INTEGER DEFAULT 0,
+                    losses INTEGER DEFAULT 0,
+                    draws INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS matches (
+                    id SERIAL PRIMARY KEY,
+                    room_code VARCHAR(32),
+                    sente_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    gote_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    sente_name VARCHAR(128) NOT NULL,
+                    gote_name VARCHAR(128) NOT NULL,
+                    sente_picture VARCHAR(512),
+                    gote_picture VARCHAR(512),
+                    winner_color VARCHAR(16) NOT NULL,
+                    winner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    end_reason VARCHAR(64),
+                    move_count INTEGER DEFAULT 0,
+                    played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                """)
+            else:
+                cur.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    google_id TEXT UNIQUE NOT NULL,
+                    email TEXT,
+                    name TEXT NOT NULL,
+                    picture TEXT,
+                    rating INTEGER DEFAULT 1200,
+                    wins INTEGER DEFAULT 0,
+                    losses INTEGER DEFAULT 0,
+                    draws INTEGER DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                """)
+                cur.execute("""
+                CREATE TABLE IF NOT EXISTS matches (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    room_code TEXT,
+                    sente_user_id INTEGER,
+                    gote_user_id INTEGER,
+                    sente_name TEXT NOT NULL,
+                    gote_name TEXT NOT NULL,
+                    sente_picture TEXT,
+                    gote_picture TEXT,
+                    winner_color TEXT NOT NULL,
+                    winner_user_id INTEGER,
+                    end_reason TEXT,
+                    move_count INTEGER DEFAULT 0,
+                    played_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (sente_user_id) REFERENCES users(id),
+                    FOREIGN KEY (gote_user_id) REFERENCES users(id),
+                    FOREIGN KEY (winner_user_id) REFERENCES users(id)
+                );
+                """)
+            conn.commit()
+            cur.close()
+        finally:
+            conn.close()
+    except Exception as exc:
+        print(f"[database] init_db notice: {exc}")
 
 
 def upsert_user(google_id: str, email: str, name: str, picture: str) -> Dict[str, Any]:
