@@ -256,15 +256,12 @@ def record_match(
     move_count: int,
 ) -> Optional[Dict[str, Any]]:
     """
-    Records a match if at least one of the players is registered.
-    Updates wins, losses and Elo ratings when applicable.
+    Records a match.
+    If players are registered, updates wins, losses and Elo ratings.
+    If players are guests (unregistered), records the match row for global & guest statistics.
     """
     sente_id = sente_user.get("id") if sente_user else None
     gote_id = gote_user.get("id") if gote_user else None
-
-    # If neither player is registered, skip database recording
-    if not sente_id and not gote_id:
-        return None
 
     sente_pic = sente_user.get("picture") if sente_user else ""
     gote_pic = gote_user.get("picture") if gote_user else ""
@@ -275,7 +272,7 @@ def record_match(
     elif winner_color == "blanco":
         winner_id = gote_id
 
-    # Update stats & Elo
+    # Update stats & Elo only when at least one player is registered
     if sente_id and gote_id:
         # Both registered: calculate Elo delta
         s_score = 1.0 if winner_color == "negro" else (0.5 if winner_color == "tablas" else 0.0)
@@ -306,7 +303,7 @@ def record_match(
         else:
             _run_query("UPDATE users SET draws = draws + 1 WHERE id = ?", (gote_id,))
 
-    # Insert match row
+    # Insert match row (works for registered and guest matches alike)
     _run_query("""
     INSERT INTO matches (
         room_code, sente_user_id, gote_user_id,
@@ -323,6 +320,7 @@ def record_match(
         "recorded": True,
         "winner_color": winner_color,
         "winner_user_id": winner_id,
+        "is_guest": not bool(sente_id or gote_id),
     }
 
 
@@ -343,7 +341,7 @@ def get_leaderboard(limit: int = 15) -> List[Dict[str, Any]]:
 
 
 def get_recent_matches(limit: int = 10) -> List[Dict[str, Any]]:
-    """Returns recent recorded matches."""
+    """Returns recent recorded matches for registered/competitive players on public lobby."""
     query = """
     SELECT m.id, m.room_code, m.sente_name, m.gote_name,
            m.sente_picture, m.gote_picture, m.winner_color,
@@ -352,6 +350,7 @@ def get_recent_matches(limit: int = 10) -> List[Dict[str, Any]]:
                 WHEN m.winner_color = 'blanco' THEN m.gote_name
                 ELSE 'Tablas' END AS winner_name
     FROM matches m
+    WHERE (m.sente_user_id IS NOT NULL OR m.gote_user_id IS NOT NULL)
     ORDER BY m.id DESC
     LIMIT ?
     """
@@ -388,7 +387,11 @@ def delete_session(token: str):
 def get_admin_overview() -> Dict[str, Any]:
     """Calculates all key metrics and statistics for the Admin Dashboard."""
     users_cnt = (_run_query("SELECT COUNT(*) AS cnt FROM users", fetch_one=True) or {}).get("cnt", 0)
-    matches_cnt = (_run_query("SELECT COUNT(*) AS cnt FROM matches", fetch_one=True) or {}).get("cnt", 0)
+    total_matches_cnt = (_run_query("SELECT COUNT(*) AS cnt FROM matches", fetch_one=True) or {}).get("cnt", 0)
+    reg_matches_cnt = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE sente_user_id IS NOT NULL OR gote_user_id IS NOT NULL", fetch_one=True) or {}).get("cnt", 0)
+    guest_matches_cnt = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE sente_user_id IS NULL AND gote_user_id IS NULL", fetch_one=True) or {}).get("cnt", 0)
+
+    # Global stats
     sente_wins = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE winner_color = 'negro'", fetch_one=True) or {}).get("cnt", 0)
     gote_wins = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE winner_color = 'blanco'", fetch_one=True) or {}).get("cnt", 0)
     draws = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE winner_color = 'tablas'", fetch_one=True) or {}).get("cnt", 0)
@@ -397,28 +400,49 @@ def get_admin_overview() -> Dict[str, Any]:
     avg_moves_row = _run_query("SELECT AVG(move_count) AS avg_m FROM matches", fetch_one=True) or {}
     avg_moves = round(float(avg_moves_row.get("avg_m") or 0), 1)
 
+    # Guest specific stats
+    guest_sente = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE (sente_user_id IS NULL AND gote_user_id IS NULL) AND winner_color = 'negro'", fetch_one=True) or {}).get("cnt", 0)
+    guest_gote = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE (sente_user_id IS NULL AND gote_user_id IS NULL) AND winner_color = 'blanco'", fetch_one=True) or {}).get("cnt", 0)
+    guest_avg_moves_row = _run_query("SELECT AVG(move_count) AS avg_m FROM matches WHERE sente_user_id IS NULL AND gote_user_id IS NULL", fetch_one=True) or {}
+    guest_avg_moves = round(float(guest_avg_moves_row.get("avg_m") or 0), 1)
+
     return {
         "total_users": users_cnt,
-        "total_matches": matches_cnt,
+        "total_matches": total_matches_cnt,
+        "registered_matches": reg_matches_cnt,
+        "guest_matches": guest_matches_cnt,
         "sente_wins": sente_wins,
         "gote_wins": gote_wins,
         "draws": draws,
         "checkmate_count": checkmate,
         "resignation_count": resignation,
         "avg_moves": avg_moves,
+        "guest_sente_wins": guest_sente,
+        "guest_gote_wins": guest_gote,
+        "guest_avg_moves": guest_avg_moves,
     }
 
 
-def get_admin_matches(limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+def get_admin_matches(limit: int = 100, offset: int = 0, filter_type: str = "all") -> List[Dict[str, Any]]:
     """Returns detailed historical match records for Admin analysis."""
-    query = """
+    where_clause = ""
+    if filter_type == "registered":
+        where_clause = "WHERE (m.sente_user_id IS NOT NULL OR m.gote_user_id IS NOT NULL)"
+    elif filter_type == "guest":
+        where_clause = "WHERE (m.sente_user_id IS NULL AND m.gote_user_id IS NULL)"
+
+    query = f"""
     SELECT m.id, m.room_code, m.sente_name, m.gote_name,
+           m.sente_user_id, m.gote_user_id,
            m.sente_picture, m.gote_picture, m.winner_color,
            m.winner_user_id, m.end_reason, m.move_count, m.played_at,
            CASE WHEN m.winner_color = 'negro' THEN m.sente_name
                 WHEN m.winner_color = 'blanco' THEN m.gote_name
-                ELSE 'Tablas' END AS winner_name
+                ELSE 'Tablas' END AS winner_name,
+           CASE WHEN (m.sente_user_id IS NOT NULL OR m.gote_user_id IS NOT NULL)
+                THEN 1 ELSE 0 END AS is_registered
     FROM matches m
+    {where_clause}
     ORDER BY m.id DESC
     LIMIT ? OFFSET ?
     """

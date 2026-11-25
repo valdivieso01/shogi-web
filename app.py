@@ -1528,7 +1528,8 @@ def api_admin_matches():
         return jsonify({"error": "Acceso denegado. Se requieren permisos de administrador."}), 403
     limit = min(200, max(10, int(request.args.get("limit", 100))))
     offset = max(0, int(request.args.get("offset", 0)))
-    matches = database.get_admin_matches(limit=limit, offset=offset)
+    filter_type = request.args.get("filter", "all")
+    matches = database.get_admin_matches(limit=limit, offset=offset, filter_type=filter_type)
     return jsonify({"ok": True, "matches": matches})
 
 
@@ -1597,6 +1598,11 @@ def page_admin():
     .badge-win { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
     .badge-win-sente { background: #2c3e50; color: #fff; border: 1px solid #34495e; }
     .badge-win-gote { background: #555; color: #fff; border: 1px solid #777; }
+    .btn-subfilter {
+      background: transparent; border: none; color: #a89f91; font-size: 0.78rem; font-weight: 600;
+      padding: 0.25rem 0.6rem; border-radius: 6px; cursor: pointer; transition: all 0.15s;
+    }
+    .btn-subfilter.active { background: rgba(212,175,55,0.2); color: #f1c40f; }
     .auth-gate-box {
       text-align: center; padding: 3rem 1.5rem; background: #231913; border: 1px solid rgba(212,175,55,0.25);
       border-radius: 12px; max-width: 480px; margin: 4rem auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
@@ -1650,7 +1656,12 @@ def page_admin():
         <div class="kpi-card">
           <span class="kpi-label">⚔️ Partidas Totales</span>
           <span class="kpi-value" id="kpi-matches">-</span>
-          <span class="kpi-sub">Disputadas en el Dojo</span>
+          <span class="kpi-sub" id="kpi-matches-sub">-</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">🎮 Partidas de Invitados</span>
+          <span class="kpi-value" id="kpi-guests">-</span>
+          <span class="kpi-sub" id="kpi-guests-sub">Sin registro</span>
         </div>
         <div class="kpi-card">
           <span class="kpi-label">☗ Sente vs ☖ Gote</span>
@@ -1682,7 +1693,14 @@ def page_admin():
       <!-- PANEL DE PARTIDAS -->
       <div class="admin-panel" id="panel-matches">
         <div class="table-toolbar">
-          <h2 style="font-size:1.1rem; color:#f1c40f; margin:0;">Registro Histórico de Partidas</h2>
+          <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+            <h2 style="font-size:1.1rem; color:#f1c40f; margin:0;">Registro de Partidas</h2>
+            <div class="filter-pills-wrap" style="display:inline-flex; gap:0.35rem; background:#18110c; padding:0.2rem; border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
+              <button type="button" class="btn-subfilter active" data-match-filter="all">Todas (<span id="cnt-sub-all">0</span>)</button>
+              <button type="button" class="btn-subfilter" data-match-filter="registered">🏆 Registradas (<span id="cnt-sub-reg">0</span>)</button>
+              <button type="button" class="btn-subfilter" data-match-filter="guest">⚪ Invitados (<span id="cnt-sub-guest">0</span>)</button>
+            </div>
+          </div>
           <input type="search" id="search-matches" class="table-search-input" placeholder="🔍 Filtrar por sala o jugador...">
         </div>
         <div class="table-responsive">
@@ -1690,6 +1708,7 @@ def page_admin():
             <thead>
               <tr>
                 <th># ID</th>
+                <th>Tipo</th>
                 <th>Fecha</th>
                 <th>Sala</th>
                 <th>☗ Sente (Negro)</th>
@@ -1700,7 +1719,7 @@ def page_admin():
               </tr>
             </thead>
             <tbody id="matches-tbody">
-              <tr><td colspan="8" style="text-align:center; padding:2rem;">Cargando partidas...</td></tr>
+              <tr><td colspan="9" style="text-align:center; padding:2rem;">Cargando partidas...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1738,6 +1757,7 @@ def page_admin():
   <script>
     let allMatches = [];
     let allUsers = [];
+    let currentMatchFilter = "all";
 
     async function initAdmin() {
       try {
@@ -1825,7 +1845,12 @@ def page_admin():
         if (m.ok) {
           allMatches = m.matches || [];
           document.getElementById("matches-count-tab").textContent = allMatches.length;
-          renderMatchesTable(allMatches);
+          const regCnt = allMatches.filter(x => x.is_registered).length;
+          const guestCnt = allMatches.length - regCnt;
+          document.getElementById("cnt-sub-all").textContent = allMatches.length;
+          document.getElementById("cnt-sub-reg").textContent = regCnt;
+          document.getElementById("cnt-sub-guest").textContent = guestCnt;
+          applyMatchesFilter();
         }
         if (u.ok) {
           allUsers = u.users || [];
@@ -1840,6 +1865,13 @@ def page_admin():
     function renderKPIs(s) {
       document.getElementById("kpi-users").textContent = s.total_users;
       document.getElementById("kpi-matches").textContent = s.total_matches;
+      document.getElementById("kpi-matches-sub").textContent = `${s.registered_matches || 0} registradas · ${s.guest_matches || 0} invitados`;
+
+      document.getElementById("kpi-guests").textContent = s.guest_matches || 0;
+      const totalGuestSide = (s.guest_sente_wins || 0) + (s.guest_gote_wins || 0);
+      const guestSentePct = totalGuestSide > 0 ? Math.round((s.guest_sente_wins * 100) / totalGuestSide) : 50;
+      document.getElementById("kpi-guests-sub").textContent = `☗ ${guestSentePct}% vs ☖ ${100 - guestSentePct}% · Prom. ${s.guest_avg_moves || 0} movs`;
+
       document.getElementById("kpi-sides").textContent = s.sente_wins + " / " + s.gote_wins;
       const totalSide = s.sente_wins + s.gote_wins;
       const sentePct = totalSide > 0 ? Math.round((s.sente_wins * 100) / totalSide) : 50;
@@ -1854,10 +1886,13 @@ def page_admin():
     function renderMatchesTable(list) {
       const tbody = document.getElementById("matches-tbody");
       if (!list.length) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:#888;">No hay partidas registradas todavía.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:2rem; color:#888;">No hay partidas registradas todavía.</td></tr>';
         return;
       }
       tbody.innerHTML = list.map(m => {
+        const typeBadge = m.is_registered
+          ? '<span style="background:rgba(212,175,55,0.2); color:#f1c40f; border:1px solid rgba(212,175,55,0.4); padding:0.15rem 0.45rem; border-radius:4px; font-size:0.72rem; font-weight:700;">🏆 Registrada</span>'
+          : '<span style="background:rgba(255,255,255,0.08); color:#a89f91; border:1px solid rgba(255,255,255,0.15); padding:0.15rem 0.45rem; border-radius:4px; font-size:0.72rem;">⚪ Invitados</span>';
         const winnerBadge = m.winner_color === "negro"
           ? '<span class="badge-win badge-win-sente">☗ Sente (' + escapeHtml(m.sente_name) + ')</span>'
           : (m.winner_color === "blanco"
@@ -1870,6 +1905,7 @@ def page_admin():
 
         return `<tr>
           <td><strong>#${m.id}</strong></td>
+          <td>${typeBadge}</td>
           <td style="white-space:nowrap; font-size:0.78rem; color:#a89f91;">${dateStr}</td>
           <td><code>${escapeHtml(m.room_code || "-")}</code></td>
           <td><span class="player-badge-cell">${senteAvatar} <strong>${escapeHtml(m.sente_name)}</strong></span></td>
@@ -1908,6 +1944,24 @@ def page_admin():
       return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
+    function applyMatchesFilter() {
+      const q = (document.getElementById("search-matches").value || "").toLowerCase().trim();
+      let filtered = allMatches;
+      if (currentMatchFilter === "registered") {
+        filtered = filtered.filter(m => m.is_registered);
+      } else if (currentMatchFilter === "guest") {
+        filtered = filtered.filter(m => !m.is_registered);
+      }
+      if (q) {
+        filtered = filtered.filter(m =>
+          (m.room_code || "").toLowerCase().includes(q) ||
+          (m.sente_name || "").toLowerCase().includes(q) ||
+          (m.gote_name || "").toLowerCase().includes(q)
+        );
+      }
+      renderMatchesTable(filtered);
+    }
+
     // Tabs switching
     document.querySelectorAll(".admin-tab-btn").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -1919,16 +1973,18 @@ def page_admin():
       });
     });
 
-    // Real-time filters
-    document.getElementById("search-matches").addEventListener("input", (e) => {
-      const q = e.target.value.toLowerCase().trim();
-      const filtered = allMatches.filter(m =>
-        (m.room_code || "").toLowerCase().includes(q) ||
-        (m.sente_name || "").toLowerCase().includes(q) ||
-        (m.gote_name || "").toLowerCase().includes(q)
-      );
-      renderMatchesTable(filtered);
+    // Subfilters (Todas / Registradas / Invitados)
+    document.querySelectorAll(".btn-subfilter").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".btn-subfilter").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentMatchFilter = btn.dataset.matchFilter;
+        applyMatchesFilter();
+      });
     });
+
+    // Real-time search
+    document.getElementById("search-matches").addEventListener("input", applyMatchesFilter);
 
     document.getElementById("search-users").addEventListener("input", (e) => {
       const q = e.target.value.toLowerCase().trim();
