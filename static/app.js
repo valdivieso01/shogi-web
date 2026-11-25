@@ -2319,17 +2319,19 @@
      AUTENTICACIÓN GOOGLE Y PERFIL DE USUARIO
      ========================================== */
   async function checkAuthStatus() {
-    if (!state.authToken) {
-      updateAuthUI(null);
-      return;
-    }
     try {
-      const res = await fetch("/api/auth/me", {
-        headers: { Authorization: `Bearer ${state.authToken}` },
-      });
+      const headers = {};
+      if (state.authToken) {
+        headers["Authorization"] = `Bearer ${state.authToken}`;
+      }
+      const res = await fetch("/api/auth/me", { headers });
       const data = await res.json();
       if (data.authenticated && data.user) {
         state.authUser = data.user;
+        if (data.token) {
+          state.authToken = data.token;
+          localStorage.setItem("shogi_auth_token", data.token);
+        }
         updateAuthUI(data.user);
         if (data.user.name && !loadNickname()) {
           lobbyNicknameInput.value = data.user.name;

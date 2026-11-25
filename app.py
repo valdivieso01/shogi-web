@@ -1478,7 +1478,8 @@ def auth_me():
             token = request.headers.get("Authorization", "").replace("Bearer ", "").strip() or request.cookies.get("shogi_auth_token")
             if token:
                 AUTH_SESSIONS[token] = user
-        return jsonify({"authenticated": True, "user": user})
+        token = request.headers.get("Authorization", "").replace("Bearer ", "").strip() or request.cookies.get("shogi_auth_token")
+        return jsonify({"authenticated": True, "user": user, "token": token})
     return jsonify({"authenticated": False, "user": None})
 
 
@@ -1740,11 +1741,17 @@ def page_admin():
 
     async function initAdmin() {
       try {
-        const authRes = await fetch("/api/auth/me");
+        const token = localStorage.getItem("shogi_auth_token");
+        const headers = {};
+        if (token) headers["Authorization"] = "Bearer " + token;
+        const authRes = await fetch("/api/auth/me", { headers });
         const authData = await authRes.json();
         if (!authData.authenticated || !authData.user || !authData.user.is_admin) {
           showAuthGate();
           return;
+        }
+        if (authData.token) {
+          localStorage.setItem("shogi_auth_token", authData.token);
         }
         showDashboard(authData.user);
         loadAdminData();
@@ -1780,6 +1787,9 @@ def page_admin():
       });
       const data = await res.json();
       if (data.ok && data.user && data.user.is_admin) {
+        if (data.token) {
+          localStorage.setItem("shogi_auth_token", data.token);
+        }
         window.location.reload();
       } else {
         alert("La cuenta conectada (" + (data.user ? data.user.email : "") + ") no tiene permisos de administrador.");
@@ -1799,10 +1809,13 @@ def page_admin():
 
     async function loadAdminData() {
       try {
+        const token = localStorage.getItem("shogi_auth_token");
+        const headers = {};
+        if (token) headers["Authorization"] = "Bearer " + token;
         const [ovRes, matchesRes, usersRes] = await Promise.all([
-          fetch("/api/admin/overview"),
-          fetch("/api/admin/matches?limit=200"),
-          fetch("/api/admin/users?limit=200")
+          fetch("/api/admin/overview", { headers }),
+          fetch("/api/admin/matches?limit=200", { headers }),
+          fetch("/api/admin/users?limit=200", { headers })
         ]);
         const ov = await ovRes.json();
         const m = await matchesRes.json();
