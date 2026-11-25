@@ -785,11 +785,11 @@ def add_security_and_cache_headers(response):
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.google.com https://*.doubleclick.net; "
-        "style-src 'self' 'unsafe-inline'; "
+        "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.google.com https://*.doubleclick.net https://accounts.google.com; "
+        "style-src 'self' 'unsafe-inline' https://accounts.google.com; "
         "img-src 'self' data: https:; "
-        "connect-src 'self' https://pagead2.googlesyndication.com https://*.googlesyndication.com; "
-        "frame-src https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.google.com; "
+        "connect-src 'self' https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.google.com https://accounts.google.com https://*.adtrafficquality.google; "
+        "frame-src https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.google.com https://accounts.google.com; "
         "frame-ancestors 'none';"
     )
     return response
