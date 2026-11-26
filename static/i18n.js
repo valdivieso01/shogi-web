@@ -56,6 +56,12 @@
       academy_desc: "Aprende desde cero con diagramas visuales de movimiento (brújula de casillas) y práctica en el tablero: Rey, General de Oro, General de Plata, Peón y Tokin, Lancero, Caballo, Alfil y Caballo Dragón, Torre y Dragón, Reincorporaciones (Drops), prohibiciones (Nifu y Uchifuzume), Defensa de Jaque y Jaque Mate.",
       btn_start_course: "🎓 Empezar Curso desde Lección 1",
 
+      // Story Mode Campaign
+      story_badge: "🏯 Modo Historia · Campaña Histórica de 5 Capítulos",
+      story_heading: "Crónicas del Sengoku: El Camino del Shōgun (戦国将棋伝)",
+      story_desc: "Enfrenta en orden cronológico y táctico a 5 figuras legendarias del Japón feudal: desde un soldado de infantería Ashigaru hasta el mítico Meijin Ōhashi Sōkei. Cada rival posee una personalidad única en el tablero y la dificultad escala capítulo a capítulo.",
+      btn_story_unlock_all: "🔓 Modo Libre",
+
       // Lobby columns
       open_rooms_heading: "Salas Abiertas Esperando Rival",
       btn_new_public_room: "+ Nueva Sala Pública",
@@ -256,6 +262,12 @@
       academy_heading: "Interactive Course: Piece Movements, Core Rules & Tactics",
       academy_desc: "Master Shōgi from scratch with movement compass diagrams and interactive on-board practice: King, Gold General, Silver General, Pawn & Tokin, Lance, Knight, Bishop & Dragon Horse, Rook & Dragon, Drops (Reincorporations), prohibitions (Nifu & Uchifuzume), Check Defense, and Checkmate.",
       btn_start_course: "🎓 Start Course from Lesson 1",
+
+      // Story Mode Campaign
+      story_badge: "🏯 Story Mode · 5-Chapter Historical Campaign",
+      story_heading: "Sengoku Chronicles: Way of the Shōgun (戦国将棋伝)",
+      story_desc: "Challenge 5 legendary figures of feudal Japan in chronological & tactical order: from an Ashigaru foot soldier to the mythical Meijin Ōhashi Sōkei. Each rival commands a distinct playing style as difficulty scales chapter by chapter.",
+      btn_story_unlock_all: "🔓 Free Play",
 
       // Lobby columns
       open_rooms_heading: "Open Rooms Waiting for Opponents",

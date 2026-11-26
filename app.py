@@ -237,6 +237,54 @@ PIECE_META = {
 HAND_ORDER = ["R", "B", "G", "S", "N", "L", "P"]
 PIECE_VALUES = {"K": 1000, "R": 10, "B": 9, "G": 6, "S": 5, "N": 4, "L": 3, "P": 1}
 
+STORY_CHAPTERS = {
+    1: {
+        "chapter": 1,
+        "id": "ashigaru",
+        "name": "Ashigaru Tōkichi",
+        "kanji": "足軽 藤吉",
+        "mon": "歩",
+        "stars": 1,
+        "elo": 800,
+    },
+    2: {
+        "chapter": 2,
+        "id": "hanzo",
+        "name": "Hattori Hanzō",
+        "kanji": "服部 半蔵",
+        "mon": "忍",
+        "stars": 2,
+        "elo": 1100,
+    },
+    3: {
+        "chapter": 3,
+        "id": "shingen",
+        "name": "Takeda Shingen",
+        "kanji": "武田 信玄",
+        "mon": "風",
+        "stars": 3,
+        "elo": 1350,
+    },
+    4: {
+        "chapter": 4,
+        "id": "nobunaga",
+        "name": "Oda Nobunaga",
+        "kanji": "織田 信長",
+        "mon": "天",
+        "stars": 4,
+        "elo": 1600,
+    },
+    5: {
+        "chapter": 5,
+        "id": "sokei",
+        "name": "Ōhashi Sōkei",
+        "kanji": "大橋 宗桂",
+        "mon": "王",
+        "stars": 5,
+        "elo": 1850,
+    },
+}
+
 
 def is_in_promotion_zone(color: str, row: int) -> bool:
     if color == "blanco":
@@ -266,12 +314,16 @@ class GameRoom:
         visibility: str = "public",
         title: str = "",
         owner_ip: str = "",
+        ai_level: int = 3,
+        story_chapter: Optional[int] = None,
     ):
         self.code = code
-        self.mode = mode  # "online" | "local"
+        self.mode = mode  # "online" | "local" | "ai"
         self.visibility = visibility if visibility in ("public", "private") else "public"
         self.title = title or f"Dojo #{code}"
         self.owner_ip = owner_ip
+        self.story_chapter = story_chapter if story_chapter in STORY_CHAPTERS else None
+        self.ai_level = max(1, min(5, int(self.story_chapter or ai_level or 3)))
         self.lock = threading.RLock()
         self.subscribers: list[queue.Queue] = []
         self.created_at = time.time()
@@ -412,36 +464,114 @@ class GameRoom:
         else:
             self.turn = defender_color
 
+    def is_square_attacked_by(self, tablero: Tablero, target_r: int, target_c: int, attacker_color: str) -> bool:
+        """Verifica sin copiar el tablero si alguna pieza de attacker_color ataca (target_r, target_c)."""
+        attacker = self.get_jugador(attacker_color)
+        prev_mode = tablero.modo_control_tablero
+        tablero.modo_control_tablero = True
+        try:
+            for i in range(9):
+                for j in range(9):
+                    if i == target_r and j == target_c:
+                        continue
+                    p = tablero.tab[i][j]
+                    if p is not None and p.color == attacker_color:
+                        if attacker.jugar_pieza(tablero, attacker_color, (i, j), (target_r, target_c)) is True:
+                            return True
+            return False
+        finally:
+            tablero.modo_control_tablero = prev_mode
+
     def play_ai_turn(self, ai_color: str = "blanco") -> bool:
-        """Motor táctico del Bot del Dojo para partidas de 1 jugador."""
+        """Motor táctico escalable del Dojo (5 niveles de personajes históricos)."""
         if self.winner or self.turn != ai_color:
             return False
 
+        level = getattr(self, "ai_level", 3)
+        enemy_color = self.other_color(ai_color)
         jugador = self.get_jugador(ai_color)
         candidates = []
+
+        # Nivel de ruido aleatorio según dificultad (Nivel 1: alto azar -> Nivel 5: precisión de Meijin)
+        noise_map = {1: 4.2, 2: 1.4, 3: 0.45, 4: 0.18, 5: 0.05}
+        noise_amp = noise_map.get(level, 0.4)
+
+        # Ubicación de ambos reyes para heurísticas de ataque y defensa
+        enemy_king_pos = (8, 4) if ai_color == "blanco" else (0, 4)
+        own_king_pos = (0, 4) if ai_color == "blanco" else (8, 4)
+        for r in range(9):
+            for c in range(9):
+                pk = self.tablero.tab[r][c]
+                if pk is not None and pk.nombre == "K":
+                    if pk.color == enemy_color:
+                        enemy_king_pos = (r, c)
+                    elif pk.color == ai_color:
+                        own_king_pos = (r, c)
+
+        # En niveles 4 y 5, detectar qué piezas propias valiosas están amenazadas ahora mismo
+        threatened_own_squares = set()
+        if level >= 4:
+            for r in range(9):
+                for c in range(9):
+                    p = self.tablero.tab[r][c]
+                    if p is not None and p.color == ai_color and p.nombre != "K":
+                        if self.is_square_attacked_by(self.tablero, r, c, enemy_color):
+                            threatened_own_squares.add((r, c))
 
         # 1. Evaluar todos los movimientos legales de piezas en el tablero
         for r0 in range(9):
             for c0 in range(9):
                 p = self.tablero.tab[r0][c0]
                 if p is not None and p.color == ai_color:
+                    p_val = PIECE_VALUES.get(p.nombre, 1)
+                    is_currently_threatened = (r0, c0) in threatened_own_squares
                     for m in self.get_legal_moves_for_piece(self.tablero, ai_color, r0, c0):
                         r1, c1 = m["row"], m["col"]
                         target = self.tablero.tab[r1][c1]
-                        score = random.uniform(0.0, 0.4)
+                        score = random.uniform(0.0, noise_amp)
+
                         if target is not None:
-                            score += PIECE_VALUES.get(target.nombre, 1) * 3.0
+                            capture_mult = 2.0 if level == 1 else (3.2 if level <= 3 else 3.8)
+                            score += PIECE_VALUES.get(target.nombre, 1) * capture_mult
                             if getattr(target, "promocion", False):
-                                score += 2.0
-                        if m["can_promote"]:
-                            score += 2.5
-                        # Preferir avanzar hacia el rey rival y centro
+                                score += 2.2
+
+                        # Promoción (Nivel 1 a veces olvida promocionar si no es obligatorio)
+                        will_promote = m["can_promote"]
+                        if level == 1 and will_promote and not m["must_promote"] and random.random() < 0.35:
+                            will_promote = False
+                        if will_promote:
+                            promo_bonus = 3.8 if (level >= 4 and p.nombre in ("R", "B")) else 2.5
+                            score += promo_bonus
+
+                        # Personalidad Nivel 2 (Hattori Hanzō): afinidad por Caballos y Alfiles
+                        if level == 2 and p.nombre in ("N", "B"):
+                            score += 1.2
+
+                        # Si la pieza propia estaba amenazada, premiar ponerla a salvo
+                        if is_currently_threatened:
+                            score += p_val * 1.8
+
+                        # Avanzar hacia el rey enemigo y controlar el centro
                         if ai_color == "blanco" and r1 > r0:
-                            score += 0.4
+                            score += 0.35
                         elif ai_color == "negro" and r1 < r0:
-                            score += 0.4
-                        score += (4 - abs(4 - c1)) * 0.1
-                        candidates.append(("move", score, (r0, c0), (r1, c1), m["can_promote"]))
+                            score += 0.35
+                        score += (4 - abs(4 - c1)) * 0.12
+
+                        # Presión sobre la vecindad del Rey enemigo (Niveles 3-5)
+                        if level >= 3:
+                            dist_before = abs(r0 - enemy_king_pos[0]) + abs(c0 - enemy_king_pos[1])
+                            dist_after = abs(r1 - enemy_king_pos[0]) + abs(c1 - enemy_king_pos[1])
+                            if dist_after < dist_before and p.nombre != "K":
+                                score += 0.45 * (level - 2)
+                            # En Nivel 5 (Meijin), Generales de Oro/Plata protegen cerca de su propio Rey si no atacan
+                            if level == 5 and p.nombre in ("G", "S") and r0 <= 2:
+                                own_dist = abs(r1 - own_king_pos[0]) + abs(c1 - own_king_pos[1])
+                                if own_dist <= 2:
+                                    score += 0.6
+
+                        candidates.append(("move", score, (r0, c0), (r1, c1), will_promote))
 
         # 2. Evaluar reincorporaciones legales (Drops) desde el Komadai
         hand_codes = {p.nombre for p in self.tablero.piezas_muertas if p.color == ai_color}
@@ -449,16 +579,102 @@ class GameRoom:
             drops = self.get_legal_drops_for_piece(self.tablero, ai_color, code)
             for d in drops:
                 r1, c1 = d["row"], d["col"]
-                # Priorizar drops ofensivos en campo rival y centro
                 in_enemy_half = (r1 >= 4) if ai_color == "blanco" else (r1 <= 4)
-                if in_enemy_half or self.in_check == ai_color:
-                    score = PIECE_VALUES.get(code, 1) * 0.45 + (4 - abs(4 - c1)) * 0.15 + random.uniform(0.0, 0.4)
+                dist_enemy_king = abs(r1 - enemy_king_pos[0]) + abs(c1 - enemy_king_pos[1])
+
+                if in_enemy_half or self.in_check == ai_color or (level >= 2 and dist_enemy_king <= 3):
+                    drop_mult = 0.85 if level == 2 else (0.55 if level >= 4 else 0.45)
+                    score = PIECE_VALUES.get(code, 1) * drop_mult + (4 - abs(4 - c1)) * 0.15 + random.uniform(0.0, noise_amp)
+                    if level == 2 and in_enemy_half:
+                        score += 1.8  # Emboscada Shinobi de Hattori Hanzō
+                    if level >= 3 and dist_enemy_king <= 2:
+                        score += 1.6 * (level - 2)
                     candidates.append(("drop", score, code, (r1, c1), False))
 
         if not candidates:
             return False
 
         candidates.sort(key=lambda x: x[1], reverse=True)
+
+        # 3. Análisis táctico de seguridad y Jaque/Mate para niveles 3, 4 y 5 sobre los mejores candidatos
+        if level >= 3:
+            top_k = 14 if level == 3 else (20 if level == 4 else 26)
+            refined = []
+            for idx, cand in enumerate(candidates):
+                action_type, base_score, src, dst, should_promote = cand
+                if idx >= top_k:
+                    refined.append(cand)
+                    continue
+
+                r1, c1 = dst
+                sim_board = copy.deepcopy(self.tablero)
+                sim_board.modo_control_tablero = False
+                ok = False
+                moved_val = 1
+
+                if action_type == "move":
+                    r0, c0 = src
+                    piece_obj = sim_board.tab[r0][c0]
+                    moved_val = PIECE_VALUES.get(piece_obj.nombre, 1) if piece_obj else 1
+                    if jugador.jugar_pieza(sim_board, ai_color, (r0, c0), (r1, c1)):
+                        ok = True
+                        mp = sim_board.tab[r1][c1]
+                        if should_promote and mp is not None and hasattr(mp, "promocion"):
+                            mp.promocion = True
+                else:
+                    piece_code = src
+                    moved_val = PIECE_VALUES.get(piece_code, 1)
+                    if sim_board.reintroducir_pieza(jugador, piece_code, f"{r1} {c1}", sim_board):
+                        ok = True
+
+                if not ok:
+                    refined.append((action_type, base_score - 100.0, src, dst, should_promote))
+                    continue
+
+                tactical_delta = 0.0
+
+                # ¿Esta jugada da Jaque (Ōte) al Rey del jugador?
+                gives_check = self.is_king_in_check(sim_board, enemy_color)
+                if gives_check:
+                    tactical_delta += 3.5 if level == 3 else 5.2
+                    # En niveles 4 y 5: verificar si es Jaque Mate inmediato (Tsumi)
+                    if level >= 4 and not self.has_any_legal_action(sim_board, enemy_color):
+                        tactical_delta += 1000.0
+
+                # ¿La casilla destino (r1, c1) está atacada por el jugador humano?
+                dest_attacked = self.is_square_attacked_by(sim_board, r1, c1, enemy_color)
+                if dest_attacked:
+                    # En niveles 4 y 5 comprobamos si la casilla está defendida por otra pieza nuestra
+                    is_defended = False
+                    if level >= 4 and sim_board.tab[r1][c1] is not None:
+                        sim_board.tab[r1][c1].color = enemy_color
+                        is_defended = self.is_square_attacked_by(sim_board, r1, c1, ai_color)
+                        sim_board.tab[r1][c1].color = ai_color
+
+                    safety_weight = 2.0 if level == 3 else (2.5 if level == 4 else 2.9)
+                    if is_defended:
+                        # Si está defendida, solo penalizar si entregamos una pieza cara
+                        tactical_delta -= moved_val * (safety_weight * 0.45)
+                    else:
+                        # Pieza colgada gratis: fuerte penalización
+                        tactical_delta -= moved_val * safety_weight
+
+                # Nivel 5 (Meijin Ōhashi Sōkei): penalizar si dejamos Torre o Alfil propio colgado en otra casilla
+                if level == 5:
+                    for rr in range(9):
+                        for cc in range(9):
+                            if rr == r1 and cc == c1:
+                                continue
+                            own_p = sim_board.tab[rr][cc]
+                            if own_p is not None and own_p.color == ai_color and own_p.nombre in ("R", "B", "G", "S"):
+                                if self.is_square_attacked_by(sim_board, rr, cc, enemy_color):
+                                    tactical_delta -= PIECE_VALUES.get(own_p.nombre, 5) * 1.35
+
+                refined.append((action_type, base_score + tactical_delta, src, dst, should_promote))
+
+            refined.sort(key=lambda x: x[1], reverse=True)
+            candidates = refined
+
         action_type, _, src, dst, should_promote = candidates[0]
         r1, c1 = dst
 
@@ -613,6 +829,8 @@ class GameRoom:
             "title": self.title,
             "mode": self.mode,
             "visibility": self.visibility,
+            "story_chapter": getattr(self, "story_chapter", None),
+            "ai_level": getattr(self, "ai_level", 3),
             "status": self.get_status(),
             "turn": self.turn,
             "in_check": self.in_check,
@@ -2184,7 +2402,7 @@ def stream_lobby():
 @app.route("/api/rooms", methods=["POST"])
 def create_room():
     ip = get_client_ip()
-    if not SECURITY.check_rate_limit(ip, "create_room", max_calls=6, window_sec=60):
+    if not SECURITY.check_rate_limit(ip, "create_room", max_calls=15, window_sec=60):
         return jsonify({"error": "Has creado demasiadas salas en poco tiempo desde esta IP. Espera 1 minuto."}), 429
 
     data = request.get_json(silent=True) or {}
@@ -2199,6 +2417,23 @@ def create_room():
     preferred_color = data.get("color", "negro")
     if preferred_color not in ("negro", "blanco"):
         preferred_color = "negro"
+
+    raw_chapter = data.get("story_chapter")
+    story_chapter = None
+    if raw_chapter is not None:
+        try:
+            c_int = int(raw_chapter)
+            if c_int in STORY_CHAPTERS:
+                story_chapter = c_int
+        except (ValueError, TypeError):
+            pass
+
+    raw_level = data.get("ai_level", 3)
+    try:
+        ai_level = max(1, min(5, int(story_chapter or raw_level or 3)))
+    except (ValueError, TypeError):
+        ai_level = 3
+
     auth_user = get_authenticated_user(request, data.get("auth_token"))
     default_player_name = (
         auth_user["name"]
@@ -2210,7 +2445,12 @@ def create_room():
         max_len=24,
         default=default_player_name,
     )
-    room_title = sanitize_text(data.get("title"), max_len=36, default=f"Sala de {player_name}")
+    default_title = (
+        f"Cap. {story_chapter}: {STORY_CHAPTERS[story_chapter]['name']}"
+        if story_chapter
+        else f"Sala de {player_name}"
+    )
+    room_title = sanitize_text(data.get("title"), max_len=36, default=default_title)
 
     with ROOMS_LOCK:
         cleanup_expired_resources()
@@ -2225,15 +2465,28 @@ def create_room():
             del ROOMS[c]
 
         code = generate_room_code()
-        room = GameRoom(code=code, mode=mode, visibility=visibility, title=room_title, owner_ip=ip)
+        room = GameRoom(
+            code=code,
+            mode=mode,
+            visibility=visibility,
+            title=room_title,
+            owner_ip=ip,
+            ai_level=ai_level,
+            story_chapter=story_chapter,
+        )
         token = secrets.token_urlsafe(24)
         if mode == "local":
             room.players["negro"] = {"token": token, "name": "Jugador Negro (Sente)", "connected": True, "ip": ip, "user": auth_user}
             room.players["blanco"] = {"token": token, "name": "Jugador Blanco (Gote)", "connected": True, "ip": ip, "user": None}
             assigned_color = "ambos"
         elif mode == "ai":
+            bot_name = (
+                f"{STORY_CHAPTERS[story_chapter]['name']} ({STORY_CHAPTERS[story_chapter]['kanji']})"
+                if story_chapter
+                else "Sensei Bot 🤖"
+            )
             room.players["negro"] = {"token": token, "name": player_name, "connected": True, "ip": ip, "user": auth_user}
-            room.players["blanco"] = {"token": "AI_BOT", "name": "Sensei Bot 🤖", "connected": True, "ip": "AI", "user": None}
+            room.players["blanco"] = {"token": "AI_BOT", "name": bot_name, "connected": True, "ip": "AI", "user": None}
             assigned_color = "negro"
         else:
             room.players[preferred_color] = {"token": token, "name": player_name, "connected": True, "ip": ip, "user": auth_user}

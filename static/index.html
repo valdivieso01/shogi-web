@@ -34,7 +34,7 @@
   <meta name="twitter:description" content="Partidas online en tiempo real, Lobby de Matchmaking, modo contra IA y Academia interactiva de 12 lecciones en español.">
   <meta name="twitter:image" content="https://www.dojoshogi.online/static/og-image.png">
 
-  <link rel="stylesheet" href="/static/styles.css?v=17">
+  <link rel="stylesheet" href="/static/styles.css?v=18">
 
   <!-- Datos Estructurados JSON-LD (Schema.org WebSite + WebApplication + FAQPage) para indexado en Google -->
   <script type="application/ld+json">
@@ -239,6 +239,24 @@
           </div>
         </div>
       </div>
+
+      <!-- SECCIÓN MODO HISTORIA: CRÓNICAS DEL SENGOKU (5 CAPÍTULOS HISTÓRICOS) -->
+      <section class="story-campaign-card" id="story-campaign-section" aria-labelledby="story-campaign-heading">
+        <div class="story-campaign-header">
+          <div class="story-campaign-title-wrap">
+            <span class="story-tag" data-i18n="story_badge">🏯 Modo Historia · Campaña Histórica de 5 Capítulos</span>
+            <h2 id="story-campaign-heading" data-i18n="story_heading">Crónicas del Sengoku: El Camino del Shōgun (戦国将棋伝)</h2>
+            <p data-i18n="story_desc">
+              Enfrenta en orden cronológico y táctico a 5 figuras legendarias del Japón feudal: desde un soldado de infantería <em>Ashigaru</em> hasta el mítico <em>Meijin</em> <strong>Ōhashi Sōkei</strong>. Cada rival posee una personalidad única en el tablero y la dificultad escala capítulo a capítulo.
+            </p>
+          </div>
+          <div class="story-campaign-controls">
+            <span class="story-progress-pill" id="story-progress-pill">🏆 0 / 5 Derrotados</span>
+            <button type="button" class="btn btn-sm" id="btn-story-unlock-all" data-i18n="btn_story_unlock_all">🔓 Modo Libre</button>
+          </div>
+        </div>
+        <div class="story-chapters-grid" id="story-chapters-grid" aria-live="polite"></div>
+      </section>
 
       <!-- SECCIÓN NUEVA: ACADEMIA DE SHŌGI (CURSO INTERACTIVO COMPLETO DE 12 LECCIONES) -->
       <section class="tutorial-banner-card" aria-labelledby="tutorial-lobby-heading">
@@ -450,6 +468,25 @@
             <button type="button" class="btn" id="btn-tut-prev" data-i18n="btn_tut_prev">← Lección anterior</button>
             <button type="button" class="btn" id="btn-tut-retry" data-i18n="btn_tut_retry">Reiniciar ejercicio</button>
             <button type="button" class="btn btn-primary" id="btn-tut-next" data-i18n="btn_tut_next">Siguiente lección →</button>
+          </div>
+        </article>
+
+        <!-- Panel del Rival Histórico en Modo Historia -->
+        <article class="story-hud-panel" id="story-hud-panel" aria-live="polite" hidden>
+          <div class="story-hud-main">
+            <div class="story-hud-crest" id="story-hud-mon" aria-hidden="true">風</div>
+            <div class="story-hud-info">
+              <div class="story-hud-topline">
+                <span class="story-hud-chapter-badge" id="story-hud-chapter-badge">Capítulo 1 de 5</span>
+                <span class="story-hud-stars" id="story-hud-stars">⭐ 800 ELO</span>
+                <span class="story-hud-era" id="story-hud-era">1554 · Owari</span>
+              </div>
+              <h2 class="story-hud-name" id="story-hud-name">Ashigaru Tōkichi (足軽 藤吉)</h2>
+              <p class="story-hud-quote" id="story-hud-quote">"¡Aunque sea un simple soldado con sandalias de paja, algún día comandaré un ejército!"</p>
+            </div>
+            <div class="story-hud-actions">
+              <button type="button" class="btn btn-primary" id="btn-story-next-chapter" hidden>⚔️ Siguiente Capítulo →</button>
+            </div>
           </div>
         </article>
 
@@ -740,7 +777,7 @@
     </div>
   </dialog>
 
-  <script src="/static/i18n.js?v=3"></script>
-  <script src="/static/app.js?v=20" defer></script>
+  <script src="/static/i18n.js?v=4"></script>
+  <script src="/static/app.js?v=21" defer></script>
 </body>
 </html>
