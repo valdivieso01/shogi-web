@@ -244,6 +244,7 @@ STORY_CHAPTERS = {
         "name": "Ashigaru Tōkichi",
         "kanji": "足軽 藤吉",
         "mon": "歩",
+        "portrait": "/static/portraits/ashigaru.jpg",
         "stars": 1,
         "elo": 800,
     },
@@ -253,6 +254,7 @@ STORY_CHAPTERS = {
         "name": "Hattori Hanzō",
         "kanji": "服部 半蔵",
         "mon": "忍",
+        "portrait": "/static/portraits/hanzo.jpg",
         "stars": 2,
         "elo": 1100,
     },
@@ -262,6 +264,7 @@ STORY_CHAPTERS = {
         "name": "Takeda Shingen",
         "kanji": "武田 信玄",
         "mon": "風",
+        "portrait": "/static/portraits/shingen.jpg",
         "stars": 3,
         "elo": 1350,
     },
@@ -271,6 +274,7 @@ STORY_CHAPTERS = {
         "name": "Oda Nobunaga",
         "kanji": "織田 信長",
         "mon": "天",
+        "portrait": "/static/portraits/nobunaga.jpg",
         "stars": 4,
         "elo": 1600,
     },
@@ -280,6 +284,7 @@ STORY_CHAPTERS = {
         "name": "Ōhashi Sōkei",
         "kanji": "大橋 宗桂",
         "mon": "王",
+        "portrait": "/static/portraits/sokei.jpg",
         "stars": 5,
         "elo": 1850,
     },
@@ -374,6 +379,10 @@ class GameRoom:
         sente_name = self.players.get("negro", {}).get("name", "Sente")
         gote_name = self.players.get("blanco", {}).get("name", "Gote")
         end_reason = "checkmate" if "Jaque Mate" in (self.reason or "") else ("resignation" if "rendido" in (self.reason or "") else "normal")
+        story_chap = getattr(self, "story_chapter", None)
+        gote_pic_override = ""
+        if story_chap and story_chap in STORY_CHAPTERS:
+            gote_pic_override = STORY_CHAPTERS[story_chap].get("portrait", "")
         try:
             database.record_match(
                 room_code=self.code,
@@ -384,6 +393,8 @@ class GameRoom:
                 winner_color=self.winner,
                 end_reason=end_reason,
                 move_count=self.move_count,
+                story_chapter=story_chap,
+                gote_picture_override=gote_pic_override,
             )
         except Exception as e:
             print(f"[DB Error] finalize_match_record {self.code}: {e}")
@@ -2065,6 +2076,11 @@ def page_admin():
           <span class="kpi-sub" id="kpi-matches-sub">-</span>
         </div>
         <div class="kpi-card">
+          <span class="kpi-label">🏯 Modo Historia</span>
+          <span class="kpi-value" id="kpi-story">-</span>
+          <span class="kpi-sub" id="kpi-story-sub">Duelos en Crónicas del Sengoku</span>
+        </div>
+        <div class="kpi-card">
           <span class="kpi-label">🎮 Partidas de Invitados</span>
           <span class="kpi-value" id="kpi-guests">-</span>
           <span class="kpi-sub" id="kpi-guests-sub">Sin registro</span>
@@ -2101,8 +2117,9 @@ def page_admin():
         <div class="table-toolbar">
           <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
             <h2 style="font-size:1.1rem; color:#f1c40f; margin:0;">Registro de Partidas</h2>
-            <div class="filter-pills-wrap" style="display:inline-flex; gap:0.35rem; background:#18110c; padding:0.2rem; border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
+            <div class="filter-pills-wrap" style="display:inline-flex; gap:0.35rem; background:#18110c; padding:0.2rem; border-radius:8px; border:1px solid rgba(255,255,255,0.1); flex-wrap:wrap;">
               <button type="button" class="btn-subfilter active" data-match-filter="all">Todas (<span id="cnt-sub-all">0</span>)</button>
+              <button type="button" class="btn-subfilter" data-match-filter="story">🏯 Modo Historia (<span id="cnt-sub-story">0</span>)</button>
               <button type="button" class="btn-subfilter" data-match-filter="registered">🏆 Registradas (<span id="cnt-sub-reg">0</span>)</button>
               <button type="button" class="btn-subfilter" data-match-filter="guest">⚪ Invitados (<span id="cnt-sub-guest">0</span>)</button>
             </div>
@@ -2253,7 +2270,9 @@ def page_admin():
           document.getElementById("matches-count-tab").textContent = allMatches.length;
           const regCnt = allMatches.filter(x => x.is_registered).length;
           const guestCnt = allMatches.length - regCnt;
+          const storyCnt = allMatches.filter(x => x.story_chapter != null).length;
           document.getElementById("cnt-sub-all").textContent = allMatches.length;
+          document.getElementById("cnt-sub-story").textContent = storyCnt;
           document.getElementById("cnt-sub-reg").textContent = regCnt;
           document.getElementById("cnt-sub-guest").textContent = guestCnt;
           applyMatchesFilter();
@@ -2272,6 +2291,12 @@ def page_admin():
       document.getElementById("kpi-users").textContent = s.total_users;
       document.getElementById("kpi-matches").textContent = s.total_matches;
       document.getElementById("kpi-matches-sub").textContent = `${s.registered_matches || 0} registradas · ${s.guest_matches || 0} invitados`;
+
+      const storyEl = document.getElementById("kpi-story");
+      if (storyEl) {
+        storyEl.textContent = s.story_matches || 0;
+        document.getElementById("kpi-story-sub").textContent = `🏆 ${s.story_wins || 0} victorias · 💀 ${s.story_losses || 0} derrotas`;
+      }
 
       document.getElementById("kpi-guests").textContent = s.guest_matches || 0;
       const totalGuestSide = (s.guest_sente_wins || 0) + (s.guest_gote_wins || 0);
@@ -2296,9 +2321,15 @@ def page_admin():
         return;
       }
       tbody.innerHTML = list.map(m => {
-        const typeBadge = m.is_registered
-          ? '<span style="background:rgba(212,175,55,0.2); color:#f1c40f; border:1px solid rgba(212,175,55,0.4); padding:0.15rem 0.45rem; border-radius:4px; font-size:0.72rem; font-weight:700;">🏆 Registrada</span>'
-          : '<span style="background:rgba(255,255,255,0.08); color:#a89f91; border:1px solid rgba(255,255,255,0.15); padding:0.15rem 0.45rem; border-radius:4px; font-size:0.72rem;">⚪ Invitados</span>';
+        let typeBadge = "";
+        if (m.story_chapter != null) {
+          const authTag = m.is_registered ? " · 🏆" : " · ⚪";
+          typeBadge = `<span style="background:rgba(188,42,30,0.28); color:#ffd4cc; border:1px solid rgba(226,180,90,0.5); padding:0.15rem 0.45rem; border-radius:4px; font-size:0.72rem; font-weight:700;">🏯 Historia Cap. ${m.story_chapter}${authTag}</span>`;
+        } else if (m.is_registered) {
+          typeBadge = '<span style="background:rgba(212,175,55,0.2); color:#f1c40f; border:1px solid rgba(212,175,55,0.4); padding:0.15rem 0.45rem; border-radius:4px; font-size:0.72rem; font-weight:700;">🏆 Registrada</span>';
+        } else {
+          typeBadge = '<span style="background:rgba(255,255,255,0.08); color:#a89f91; border:1px solid rgba(255,255,255,0.15); padding:0.15rem 0.45rem; border-radius:4px; font-size:0.72rem;">⚪ Invitados</span>';
+        }
         const winnerBadge = m.winner_color === "negro"
           ? '<span class="badge-win badge-win-sente">☗ Sente (' + escapeHtml(m.sente_name) + ')</span>'
           : (m.winner_color === "blanco"
@@ -2353,7 +2384,9 @@ def page_admin():
     function applyMatchesFilter() {
       const q = (document.getElementById("search-matches").value || "").toLowerCase().trim();
       let filtered = allMatches;
-      if (currentMatchFilter === "registered") {
+      if (currentMatchFilter === "story") {
+        filtered = filtered.filter(m => m.story_chapter != null);
+      } else if (currentMatchFilter === "registered") {
         filtered = filtered.filter(m => m.is_registered);
       } else if (currentMatchFilter === "guest") {
         filtered = filtered.filter(m => !m.is_registered);

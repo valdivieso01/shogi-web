@@ -2562,6 +2562,9 @@
             } else if (m.winner_color === "tablas") {
               reasonLabel = isEn ? "Draw" : "Tablas";
             }
+            const storyBadge = m.story_chapter
+              ? `<span class="match-reason-badge" style="background:rgba(188,42,30,0.28); color:#ffd4cc; border-color:rgba(226,180,90,0.45);">🏯 ${isEn ? "Story Ch." : "Historia Cap."} ${m.story_chapter}</span>`
+              : "";
             return `
               <div class="match-item-card">
                 <div class="match-players">
@@ -2577,6 +2580,7 @@
                   </div>
                 </div>
                 <div class="match-meta-right">
+                  ${storyBadge}
                   <span class="match-reason-badge">${reasonLabel}</span>
                   <span>${m.move_count} ${isEn ? "moves" : "jugadas"}</span>
                 </div>

@@ -141,6 +141,7 @@ def init_db():
                     winner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
                     end_reason VARCHAR(64),
                     move_count INTEGER DEFAULT 0,
+                    story_chapter INTEGER DEFAULT NULL,
                     played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
                 CREATE TABLE IF NOT EXISTS sessions (
@@ -154,6 +155,10 @@ def init_db():
                     updated_at DOUBLE PRECISION NOT NULL
                 );
                 """)
+                try:
+                    cur.execute("ALTER TABLE matches ADD COLUMN IF NOT EXISTS story_chapter INTEGER DEFAULT NULL;")
+                except Exception:
+                    pass
             else:
                 cur.execute("""
                 CREATE TABLE IF NOT EXISTS users (
@@ -184,12 +189,17 @@ def init_db():
                     winner_user_id INTEGER,
                     end_reason TEXT,
                     move_count INTEGER DEFAULT 0,
+                    story_chapter INTEGER DEFAULT NULL,
                     played_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (sente_user_id) REFERENCES users(id),
                     FOREIGN KEY (gote_user_id) REFERENCES users(id),
                     FOREIGN KEY (winner_user_id) REFERENCES users(id)
                 );
                 """)
+                try:
+                    cur.execute("ALTER TABLE matches ADD COLUMN story_chapter INTEGER DEFAULT NULL;")
+                except Exception:
+                    pass
                 cur.execute("""
                 CREATE TABLE IF NOT EXISTS sessions (
                     token TEXT PRIMARY KEY,
@@ -267,17 +277,19 @@ def record_match(
     winner_color: str,
     end_reason: str,
     move_count: int,
+    story_chapter: Optional[int] = None,
+    gote_picture_override: str = "",
 ) -> Optional[Dict[str, Any]]:
     """
-    Records a match.
+    Records a match (PvP registered, PvP guest, or Story Mode campaign).
     If players are registered, updates wins, losses and Elo ratings.
-    If players are guests (unregistered), records the match row for global & guest statistics.
+    If players are guests (unregistered) or playing Story Mode, records the match row for global, guest & story statistics.
     """
     sente_id = sente_user.get("id") if sente_user else None
     gote_id = gote_user.get("id") if gote_user else None
 
     sente_pic = sente_user.get("picture") if sente_user else ""
-    gote_pic = gote_user.get("picture") if gote_user else ""
+    gote_pic = gote_picture_override or (gote_user.get("picture") if gote_user else "")
 
     winner_id = None
     if winner_color == "negro":
@@ -300,11 +312,11 @@ def record_match(
             _run_query("UPDATE users SET rating = ?, draws = draws + 1 WHERE id = ?", (new_s_rating, sente_id))
             _run_query("UPDATE users SET rating = ?, draws = draws + 1 WHERE id = ?", (new_g_rating, gote_id))
     elif sente_id and not gote_id:
-        # Sente is registered vs guest
+        # Sente is registered vs guest or Story Boss
         if winner_color == "negro":
             _run_query("UPDATE users SET wins = wins + 1, rating = rating + 8 WHERE id = ?", (sente_id,))
         elif winner_color == "blanco":
-            _run_query("UPDATE users SET losses = losses + 1, rating = MAX(100, rating - 8) WHERE id = ?", (sente_id,))
+            _run_query("UPDATE users SET losses = losses + 1, rating = GREATEST(100, rating - 8) WHERE id = ?" if _IS_POSTGRES else "UPDATE users SET losses = losses + 1, rating = MAX(100, rating - 8) WHERE id = ?", (sente_id,))
         else:
             _run_query("UPDATE users SET draws = draws + 1 WHERE id = ?", (sente_id,))
     elif gote_id and not sente_id:
@@ -312,21 +324,21 @@ def record_match(
         if winner_color == "blanco":
             _run_query("UPDATE users SET wins = wins + 1, rating = rating + 8 WHERE id = ?", (gote_id,))
         elif winner_color == "negro":
-            _run_query("UPDATE users SET losses = losses + 1, rating = MAX(100, rating - 8) WHERE id = ?", (gote_id,))
+            _run_query("UPDATE users SET losses = losses + 1, rating = GREATEST(100, rating - 8) WHERE id = ?" if _IS_POSTGRES else "UPDATE users SET losses = losses + 1, rating = MAX(100, rating - 8) WHERE id = ?", (gote_id,))
         else:
             _run_query("UPDATE users SET draws = draws + 1 WHERE id = ?", (gote_id,))
 
-    # Insert match row (works for registered and guest matches alike)
+    # Insert match row (works for registered, guest, and story matches alike)
     _run_query("""
     INSERT INTO matches (
         room_code, sente_user_id, gote_user_id,
         sente_name, gote_name, sente_picture, gote_picture,
-        winner_color, winner_user_id, end_reason, move_count
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        winner_color, winner_user_id, end_reason, move_count, story_chapter
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         room_code, sente_id, gote_id,
         sente_name, gote_name, sente_pic, gote_pic,
-        winner_color, winner_id, end_reason, move_count
+        winner_color, winner_id, end_reason, move_count, story_chapter
     ))
 
     return {
@@ -334,6 +346,7 @@ def record_match(
         "winner_color": winner_color,
         "winner_user_id": winner_id,
         "is_guest": not bool(sente_id or gote_id),
+        "story_chapter": story_chapter,
     }
 
 
@@ -354,16 +367,16 @@ def get_leaderboard(limit: int = 15) -> List[Dict[str, Any]]:
 
 
 def get_recent_matches(limit: int = 10) -> List[Dict[str, Any]]:
-    """Returns recent recorded matches for registered/competitive players on public lobby."""
+    """Returns recent recorded matches (registered competitive and Story Mode chapters) on public lobby."""
     query = """
     SELECT m.id, m.room_code, m.sente_name, m.gote_name,
            m.sente_picture, m.gote_picture, m.winner_color,
-           m.winner_user_id, m.end_reason, m.move_count, m.played_at,
+           m.winner_user_id, m.end_reason, m.move_count, m.story_chapter, m.played_at,
            CASE WHEN m.winner_color = 'negro' THEN m.sente_name
                 WHEN m.winner_color = 'blanco' THEN m.gote_name
                 ELSE 'Tablas' END AS winner_name
     FROM matches m
-    WHERE (m.sente_user_id IS NOT NULL OR m.gote_user_id IS NOT NULL)
+    WHERE (m.sente_user_id IS NOT NULL OR m.gote_user_id IS NOT NULL OR m.story_chapter IS NOT NULL)
     ORDER BY m.id DESC
     LIMIT ?
     """
@@ -403,6 +416,9 @@ def get_admin_overview() -> Dict[str, Any]:
     total_matches_cnt = (_run_query("SELECT COUNT(*) AS cnt FROM matches", fetch_one=True) or {}).get("cnt", 0)
     reg_matches_cnt = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE sente_user_id IS NOT NULL OR gote_user_id IS NOT NULL", fetch_one=True) or {}).get("cnt", 0)
     guest_matches_cnt = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE sente_user_id IS NULL AND gote_user_id IS NULL", fetch_one=True) or {}).get("cnt", 0)
+    story_matches_cnt = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE story_chapter IS NOT NULL", fetch_one=True) or {}).get("cnt", 0)
+    story_wins_cnt = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE story_chapter IS NOT NULL AND winner_color = 'negro'", fetch_one=True) or {}).get("cnt", 0)
+    story_losses_cnt = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE story_chapter IS NOT NULL AND winner_color = 'blanco'", fetch_one=True) or {}).get("cnt", 0)
 
     # Global stats
     sente_wins = (_run_query("SELECT COUNT(*) AS cnt FROM matches WHERE winner_color = 'negro'", fetch_one=True) or {}).get("cnt", 0)
@@ -424,6 +440,9 @@ def get_admin_overview() -> Dict[str, Any]:
         "total_matches": total_matches_cnt,
         "registered_matches": reg_matches_cnt,
         "guest_matches": guest_matches_cnt,
+        "story_matches": story_matches_cnt,
+        "story_wins": story_wins_cnt,
+        "story_losses": story_losses_cnt,
         "sente_wins": sente_wins,
         "gote_wins": gote_wins,
         "draws": draws,
@@ -443,12 +462,14 @@ def get_admin_matches(limit: int = 100, offset: int = 0, filter_type: str = "all
         where_clause = "WHERE (m.sente_user_id IS NOT NULL OR m.gote_user_id IS NOT NULL)"
     elif filter_type == "guest":
         where_clause = "WHERE (m.sente_user_id IS NULL AND m.gote_user_id IS NULL)"
+    elif filter_type == "story":
+        where_clause = "WHERE m.story_chapter IS NOT NULL"
 
     query = f"""
     SELECT m.id, m.room_code, m.sente_name, m.gote_name,
            m.sente_user_id, m.gote_user_id,
            m.sente_picture, m.gote_picture, m.winner_color,
-           m.winner_user_id, m.end_reason, m.move_count, m.played_at,
+           m.winner_user_id, m.end_reason, m.move_count, m.story_chapter, m.played_at,
            CASE WHEN m.winner_color = 'negro' THEN m.sente_name
                 WHEN m.winner_color = 'blanco' THEN m.gote_name
                 ELSE 'Tablas' END AS winner_name,
