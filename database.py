@@ -502,7 +502,7 @@ def get_admin_users(limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
 def save_active_room(room_code: str, state_dict: Dict[str, Any], updated_at: float):
     """Persists active GameRoom state so Vercel serverless instances share rooms without 404s."""
     try:
-        payload = json.dumps(state_dict)
+        payload = json.dumps(state_dict, default=str)
         if _IS_POSTGRES:
             _run_query(
                 """

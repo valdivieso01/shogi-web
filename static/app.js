@@ -1568,11 +1568,37 @@
     state.legalTargets = [];
   }
 
+  async function ensureRoomSyncedOnServer() {
+    if (!state.roomCode || !state.game || state.tutorialActive) return false;
+    try {
+      const res = await fetch(`/api/rooms/${state.roomCode}/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          player_token: state.playerToken,
+          auth_token: state.authToken,
+          state: state.game,
+        }),
+      });
+      return res.ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
   async function fetchLegalMovesForCell(row, col) {
     if (!state.roomCode) return;
-    const res = await fetch(
+    let res = await fetch(
       `/api/rooms/${state.roomCode}/legal-moves?row=${row}&col=${col}&color=${state.game.turn}`
     );
+    if (res.status === 404) {
+      const synced = await ensureRoomSyncedOnServer();
+      if (synced) {
+        res = await fetch(
+          `/api/rooms/${state.roomCode}/legal-moves?row=${row}&col=${col}&color=${state.game.turn}`
+        );
+      }
+    }
     if (!res.ok) return;
     const data = await res.json();
     state.legalTargets = data.moves || [];
@@ -1581,9 +1607,17 @@
 
   async function fetchLegalDrops(color, code) {
     if (!state.roomCode) return;
-    const res = await fetch(
+    let res = await fetch(
       `/api/rooms/${state.roomCode}/legal-moves?drop=${encodeURIComponent(code)}&color=${color}`
     );
+    if (res.status === 404) {
+      const synced = await ensureRoomSyncedOnServer();
+      if (synced) {
+        res = await fetch(
+          `/api/rooms/${state.roomCode}/legal-moves?drop=${encodeURIComponent(code)}&color=${color}`
+        );
+      }
+    }
     if (!res.ok) return;
     const data = await res.json();
     state.legalTargets = data.moves || [];
@@ -1686,16 +1720,27 @@
   }
 
   async function submitMove(from, to, promote) {
-    const res = await fetch(`/api/rooms/${state.roomCode}/move`, {
+    const payload = JSON.stringify({
+      player_token: state.playerToken,
+      from,
+      to,
+      promote,
+    });
+    let res = await fetch(`/api/rooms/${state.roomCode}/move`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        player_token: state.playerToken,
-        from,
-        to,
-        promote,
-      }),
+      body: payload,
     });
+    if (res.status === 404) {
+      const synced = await ensureRoomSyncedOnServer();
+      if (synced) {
+        res = await fetch(`/api/rooms/${state.roomCode}/move`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+        });
+      }
+    }
     const data = await res.json();
     if (res.ok && data.state) {
       zenAudio.playWoodClick();
@@ -1706,15 +1751,26 @@
   }
 
   async function submitDrop(pieceCode, row, col) {
-    const res = await fetch(`/api/rooms/${state.roomCode}/drop`, {
+    const payload = JSON.stringify({
+      player_token: state.playerToken,
+      piece: pieceCode,
+      to: [row, col],
+    });
+    let res = await fetch(`/api/rooms/${state.roomCode}/drop`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        player_token: state.playerToken,
-        piece: pieceCode,
-        to: [row, col],
-      }),
+      body: payload,
     });
+    if (res.status === 404) {
+      const synced = await ensureRoomSyncedOnServer();
+      if (synced) {
+        res = await fetch(`/api/rooms/${state.roomCode}/drop`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+        });
+      }
+    }
     const data = await res.json();
     if (res.ok && data.state) {
       zenAudio.playWoodClick();
