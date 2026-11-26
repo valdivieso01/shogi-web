@@ -2858,6 +2858,10 @@
     const isAdmin = Boolean(state.authUser && state.authUser.is_admin);
     const freePlayActive = isAdmin && prog.unlockAll;
 
+    const hubBadge = document.getElementById("hub-story-badge");
+    if (hubBadge) {
+      hubBadge.textContent = `${prog.completed.length}/5`;
+    }
     if (pill) {
       pill.textContent = isEn
         ? `🏆 ${prog.completed.length} / 5 Defeated`
@@ -3023,6 +3027,22 @@
     document.getElementById("story-hud-quote").textContent = quoteText;
   }
 
+  function switchHubTab(tabName) {
+    const panels = {
+      online: document.getElementById("hub-panel-online"),
+      story: document.getElementById("story-campaign-section"),
+      ranking: document.getElementById("hub-panel-ranking"),
+    };
+    Object.entries(panels).forEach(([key, el]) => {
+      if (el) el.hidden = key !== tabName;
+    });
+    document.querySelectorAll(".lobby-hub-tab").forEach((btn) => {
+      const isMatch = btn.getAttribute("data-hub-tab") === tabName;
+      btn.classList.toggle("active", isMatch);
+      btn.setAttribute("aria-selected", isMatch ? "true" : "false");
+    });
+  }
+
   function initStoryCampaign() {
     const btnUnlock = document.getElementById("btn-story-unlock-all");
     if (btnUnlock) {
@@ -3034,13 +3054,15 @@
         renderStoryCampaign();
       });
     }
+    document.querySelectorAll(".lobby-hub-tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        switchHubTab(btn.getAttribute("data-hub-tab"));
+      });
+    });
     const btnJumpStory = document.getElementById("btn-jump-story");
     if (btnJumpStory) {
       btnJumpStory.addEventListener("click", () => {
-        const sec = document.getElementById("story-campaign-section");
-        if (sec) {
-          sec.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
+        switchHubTab("story");
       });
     }
     renderStoryCampaign();

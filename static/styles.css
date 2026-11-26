@@ -257,11 +257,11 @@ h3 {
 .lobby-page {
   max-inline-size: 1240px;
   margin-inline: auto;
-  padding-block: 1.5rem;
+  padding-block: 0.95rem 1.5rem;
   padding-inline: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 0.95rem;
 }
 
 .lobby-hero {
@@ -532,62 +532,70 @@ h3 {
   color: var(--accent-gold);
 }
 
-/* Tarjeta Academia / Partida Prearmada en el Lobby */
+/* Tarjeta Academia / Partida Prearmada en el Lobby (SIEMPRE #1 ARRIBA) */
 .tutorial-banner-card {
   display: flex;
-  flex-wrap: wrap;
-  align-items: safe center;
-  justify-content: space-between;
-  gap: 1.25rem;
-  padding: 1.35rem 1.5rem;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.95rem 1.25rem;
   border-radius: 14px;
-  background: linear-gradient(135deg, rgba(46, 139, 103, 0.22) 0%, var(--bg-card) 80%);
-  border: 1px solid rgba(57, 217, 138, 0.42);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38);
+  background: linear-gradient(135deg, rgba(46, 139, 103, 0.24) 0%, var(--bg-card) 82%);
+  border: 1px solid rgba(57, 217, 138, 0.45);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.42);
 }
 
 .tutorial-banner-info {
-  flex: 1 1 520px;
+  width: 100%;
+}
+
+.tutorial-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-block-end: 0.35rem;
 }
 
 .tutorial-tag {
   display: inline-block;
-  padding: 0.2rem 0.65rem;
+  padding: 0.16rem 0.6rem;
   border-radius: 999px;
-  background: rgba(57, 217, 138, 0.16);
+  background: rgba(57, 217, 138, 0.18);
   color: #6ee7b7;
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-block-end: 0.45rem;
+  margin-block-end: 0.25rem;
 }
 
 .tutorial-banner-info h2 {
-  margin: 0 0 0.4rem 0;
-  font-size: 1.22rem;
+  margin: 0;
+  font-size: 1.14rem;
   color: var(--text-main);
 }
 
-.tutorial-banner-info p {
-  margin: 0 0 0.85rem 0;
-  font-size: 0.88rem;
+.tutorial-banner-info p.tutorial-compact-desc {
+  margin: 0 0 0.55rem 0;
+  font-size: 0.82rem;
   color: var(--text-muted);
+  line-height: 1.38;
 }
 
 .tutorial-chapters-pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: 0.38rem;
 }
 
 .chapter-pill {
-  padding: 0.32rem 0.7rem;
+  padding: 0.26rem 0.62rem;
   border-radius: 999px;
   border: 1px solid rgba(223, 177, 91, 0.4);
-  background: rgba(24, 20, 17, 0.65);
+  background: rgba(24, 20, 17, 0.68);
   color: var(--accent-gold);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.15s ease, transform 0.12s ease;
@@ -596,6 +604,69 @@ h3 {
 .chapter-pill:hover {
   background: rgba(223, 177, 91, 0.22);
   transform: translateY(-1px);
+}
+
+/* BARRA DE PESTAÑAS DEL DOJO (ONLINE | MODO HISTORIA | SALÓN DE LA FAMA) */
+.lobby-hub-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  background: rgba(16, 11, 7, 0.85);
+  border: 1px solid rgba(226, 180, 90, 0.32);
+  border-radius: 12px;
+  padding: 0.38rem;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+}
+
+.lobby-hub-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.68rem 0.9rem;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-align: center;
+}
+
+.lobby-hub-tab:hover {
+  color: #fff;
+  background: rgba(226, 180, 90, 0.08);
+}
+
+.lobby-hub-tab.active {
+  background: linear-gradient(135deg, rgba(188, 42, 30, 0.28), rgba(226, 180, 90, 0.2));
+  border-color: rgba(226, 180, 90, 0.65);
+  color: #fae5a3;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 225, 150, 0.18);
+}
+
+.hub-tab-icon {
+  font-size: 1.1rem;
+}
+
+.hub-tab-badge {
+  background: rgba(188, 42, 30, 0.85);
+  border: 1px solid rgba(255, 210, 180, 0.5);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+}
+
+@media (max-width: 780px) {
+  .lobby-hub-tabs {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Panel del Sensei en la Partida Guiada */

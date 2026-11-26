@@ -37,7 +37,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Shippori+Mincho:wght@600;700;800&family=Yuji+Syuku&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/styles.css?v=20">
+  <link rel="stylesheet" href="/static/styles.css?v=21">
 
   <!-- Datos Estructurados JSON-LD (Schema.org WebSite + WebApplication + FAQPage) para indexado en Google -->
   <script type="application/ld+json">
@@ -246,8 +246,58 @@
         </div>
       </div>
 
-      <!-- 1. SALAS ONLINE, CÓDIGO PRIVADO, ESPECTADOR Y JUGADORES EN LÍNEA (PRIMERA PLANA) -->
-      <div class="lobby-columns">
+      <!-- 1. PRIMERO Y SIEMPRE VISIBLE: ACADEMIA DE SHŌGI (CURSO INTERACTIVO DE 12 LECCIONES) -->
+      <section class="tutorial-banner-card" aria-labelledby="tutorial-lobby-heading">
+        <div class="tutorial-banner-info">
+          <div class="tutorial-top-row">
+            <div>
+              <span class="tutorial-tag" data-i18n="academy_badge">🎓 Academia Interactiva Completa · 12 Lecciones con Diagramas</span>
+              <h2 id="tutorial-lobby-heading" data-i18n="academy_heading">Curso Paso a Paso: Cómo Mueve Cada Pieza, Reglas y Tácticas</h2>
+            </div>
+            <button type="button" class="btn btn-primary" id="btn-start-tutorial-hero" data-i18n="btn_start_course">
+              🎓 Empezar Curso desde Lección 1
+            </button>
+          </div>
+          <p data-i18n="academy_desc" class="tutorial-compact-desc">
+            Aprende desde cero con diagramas visuales de movimiento (brújula de casillas) y práctica en el tablero:
+            <strong>Rey</strong>, <strong>General de Oro</strong>, <strong>General de Plata</strong>, <strong>Peón y Tokin</strong>, <strong>Lancero</strong>, <strong>Caballo</strong>, <strong>Alfil y Caballo Dragón</strong>, <strong>Torre y Dragón</strong>, <strong>Reincorporaciones (Drops)</strong>, prohibiciones (<strong>Nifu y Uchifuzume</strong>), <strong>Defensa de Jaque</strong> y <strong>Jaque Mate</strong>.
+          </p>
+          <div class="tutorial-chapters-pills" id="tutorial-chapters-pills">
+            <button type="button" class="chapter-pill" data-step="0">1. El Rey (王 · K)</button>
+            <button type="button" class="chapter-pill" data-step="1">2. General de Oro (金 · G)</button>
+            <button type="button" class="chapter-pill" data-step="2">3. General de Plata (銀 · S)</button>
+            <button type="button" class="chapter-pill" data-step="3">4. Peón y Tokin (歩 → と)</button>
+            <button type="button" class="chapter-pill" data-step="4">5. El Lancero (香 · L)</button>
+            <button type="button" class="chapter-pill" data-step="5">6. El Caballo (桂 · N)</button>
+            <button type="button" class="chapter-pill" data-step="6">7. Alfil y C.Dragón (角 → 馬)</button>
+            <button type="button" class="chapter-pill" data-step="7">8. Torre y Dragón (飛 → 龍)</button>
+            <button type="button" class="chapter-pill" data-step="8">9. Reincorporar (Drops)</button>
+            <button type="button" class="chapter-pill" data-step="9">10. Reglas Nifu y Uchifuzume</button>
+            <button type="button" class="chapter-pill" data-step="10">11. Defender un Jaque</button>
+            <button type="button" class="chapter-pill" data-step="11">12. Jaque Mate (Atama-kin)</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. BARRA DE PESTAÑAS DEL DOJO (TODO A LA VISTA EN LA MISMA PANTALLA SIN HACER SCROLL) -->
+      <nav class="lobby-hub-tabs" role="tablist" aria-label="Secciones principales del Dojo">
+        <button type="button" class="lobby-hub-tab active" role="tab" aria-selected="true" data-hub-tab="online" id="hub-tab-btn-online">
+          <span class="hub-tab-icon" aria-hidden="true">⚔️</span>
+          <span data-i18n="tab_online_lobby">Salas Online y Partidas en Vivo</span>
+        </button>
+        <button type="button" class="lobby-hub-tab" role="tab" aria-selected="false" data-hub-tab="story" id="hub-tab-btn-story">
+          <span class="hub-tab-icon" aria-hidden="true">🏯</span>
+          <span data-i18n="tab_story_mode">Modo Historia: Crónicas del Sengoku</span>
+          <span class="hub-tab-badge" id="hub-story-badge">0/5</span>
+        </button>
+        <button type="button" class="lobby-hub-tab" role="tab" aria-selected="false" data-hub-tab="ranking" id="hub-tab-btn-ranking">
+          <span class="hub-tab-icon" aria-hidden="true">🏆</span>
+          <span data-i18n="tab_hall_of_fame">Salón de la Fama y Últimas Partidas</span>
+        </button>
+      </nav>
+
+      <!-- PANEL A: SALAS ONLINE, CÓDIGO PRIVADO, ESPECTADOR Y JUGADORES EN LÍNEA -->
+      <div class="lobby-columns" id="hub-panel-online" role="tabpanel">
         <!-- Salas Públicas Esperando Jugador -->
         <section class="lobby-panel lobby-panel-featured" aria-labelledby="open-rooms-heading">
           <div class="panel-header">
@@ -293,8 +343,26 @@
         </div>
       </div>
 
-      <!-- 2. RANKING COMPETITIVO Y SALÓN DE LA FAMA ONLINE -->
-      <section class="community-stats-section" aria-labelledby="leaderboard-heading">
+      <!-- PANEL B: MODO HISTORIA (1 JUGADOR): CRÓNICAS DEL SENGOKU -->
+      <section class="story-campaign-card" id="story-campaign-section" role="tabpanel" aria-labelledby="story-campaign-heading" hidden>
+        <div class="story-campaign-header">
+          <div class="story-campaign-title-wrap">
+            <span class="story-tag" data-i18n="story_badge">🏯 Modo Historia · Campaña de 5 Capítulos (1 Jugador)</span>
+            <h2 id="story-campaign-heading" data-i18n="story_heading">Crónicas del Sengoku: El Camino del Shōgun (戦国将棋伝)</h2>
+            <p data-i18n="story_desc">
+              Enfrenta en orden cronológico y táctico a 5 figuras legendarias del Japón feudal: desde un soldado de infantería <em>Ashigaru</em> hasta el mítico <em>Meijin</em> <strong>Ōhashi Sōkei</strong>.
+            </p>
+          </div>
+          <div class="story-campaign-controls">
+            <span class="story-progress-pill" id="story-progress-pill">🏆 0 / 5 Derrotados</span>
+            <button type="button" class="btn btn-sm" id="btn-story-unlock-all" data-i18n="btn_story_unlock_all" hidden>🔓 Modo Libre</button>
+          </div>
+        </div>
+        <div class="story-chapters-grid" id="story-chapters-grid" aria-live="polite"></div>
+      </section>
+
+      <!-- PANEL C: RANKING COMPETITIVO Y SALÓN DE LA FAMA ONLINE -->
+      <section class="community-stats-section" id="hub-panel-ranking" role="tabpanel" aria-labelledby="leaderboard-heading" hidden>
         <div class="stats-grid">
           <!-- Salón de la Fama -->
           <div class="stats-card leaderboard-card">
@@ -334,55 +402,6 @@
               <p class="empty-state" data-i18n="recent_matches_empty">No hay partidas registradas recientemente.</p>
             </div>
           </div>
-        </div>
-      </section>
-
-      <!-- 3. MODO HISTORIA (1 JUGADOR): CRÓNICAS DEL SENGOKU -->
-      <section class="story-campaign-card" id="story-campaign-section" aria-labelledby="story-campaign-heading">
-        <div class="story-campaign-header">
-          <div class="story-campaign-title-wrap">
-            <span class="story-tag" data-i18n="story_badge">🏯 Modo Historia · Campaña de 5 Capítulos (1 Jugador)</span>
-            <h2 id="story-campaign-heading" data-i18n="story_heading">Crónicas del Sengoku: El Camino del Shōgun (戦国将棋伝)</h2>
-            <p data-i18n="story_desc">
-              Enfrenta en orden cronológico y táctico a 5 figuras legendarias del Japón feudal: desde un soldado de infantería <em>Ashigaru</em> hasta el mítico <em>Meijin</em> <strong>Ōhashi Sōkei</strong>.
-            </p>
-          </div>
-          <div class="story-campaign-controls">
-            <span class="story-progress-pill" id="story-progress-pill">🏆 0 / 5 Derrotados</span>
-            <button type="button" class="btn btn-sm" id="btn-story-unlock-all" data-i18n="btn_story_unlock_all" hidden>🔓 Modo Libre</button>
-          </div>
-        </div>
-        <div class="story-chapters-grid" id="story-chapters-grid" aria-live="polite"></div>
-      </section>
-
-      <!-- 4. ACADEMIA DE SHŌGI (CURSO INTERACTIVO DE 12 LECCIONES) -->
-      <section class="tutorial-banner-card" aria-labelledby="tutorial-lobby-heading">
-        <div class="tutorial-banner-info">
-          <span class="tutorial-tag" data-i18n="academy_badge">🎓 Academia Interactiva Completa · 12 Lecciones con Diagramas</span>
-          <h2 id="tutorial-lobby-heading" data-i18n="academy_heading">Curso Paso a Paso: Cómo Mueve Cada Pieza, Reglas y Tácticas</h2>
-          <p data-i18n="academy_desc">
-            Aprende desde cero con diagramas visuales de movimiento (brújula de casillas) y práctica en el tablero:
-            <strong>Rey</strong>, <strong>General de Oro</strong>, <strong>General de Plata</strong>, <strong>Peón y Tokin</strong>, <strong>Lancero</strong>, <strong>Caballo</strong>, <strong>Alfil y Caballo Dragón</strong>, <strong>Torre y Dragón</strong>, <strong>Reincorporaciones (Drops)</strong>, prohibiciones (<strong>Nifu y Uchifuzume</strong>), <strong>Defensa de Jaque</strong> y <strong>Jaque Mate</strong>.
-          </p>
-          <div class="tutorial-chapters-pills" id="tutorial-chapters-pills">
-            <button type="button" class="chapter-pill" data-step="0">1. El Rey (王 · K)</button>
-            <button type="button" class="chapter-pill" data-step="1">2. General de Oro (金 · G)</button>
-            <button type="button" class="chapter-pill" data-step="2">3. General de Plata (銀 · S)</button>
-            <button type="button" class="chapter-pill" data-step="3">4. Peón y Tokin (歩 → と)</button>
-            <button type="button" class="chapter-pill" data-step="4">5. El Lancero (香 · L)</button>
-            <button type="button" class="chapter-pill" data-step="5">6. El Caballo (桂 · N)</button>
-            <button type="button" class="chapter-pill" data-step="6">7. Alfil y C.Dragón (角 → 馬)</button>
-            <button type="button" class="chapter-pill" data-step="7">8. Torre y Dragón (飛 → 龍)</button>
-            <button type="button" class="chapter-pill" data-step="8">9. Reincorporar (Drops)</button>
-            <button type="button" class="chapter-pill" data-step="9">10. Reglas Nifu y Uchifuzume</button>
-            <button type="button" class="chapter-pill" data-step="10">11. Defender un Jaque</button>
-            <button type="button" class="chapter-pill" data-step="11">12. Jaque Mate (Atama-kin)</button>
-          </div>
-        </div>
-        <div class="tutorial-banner-cta">
-          <button type="button" class="btn btn-primary btn-lg" id="btn-start-tutorial-hero" data-i18n="btn_start_course">
-            🎓 Empezar Curso desde Lección 1
-          </button>
         </div>
       </section>
 
@@ -790,7 +809,7 @@
     </div>
   </dialog>
 
-  <script src="/static/i18n.js?v=5"></script>
-  <script src="/static/app.js?v=26" defer></script>
+  <script src="/static/i18n.js?v=6"></script>
+  <script src="/static/app.js?v=27" defer></script>
 </body>
 </html>
