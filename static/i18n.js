@@ -47,7 +47,8 @@
       searching_rival_n: "{n} buscando rival",
       btn_quick_match: "⚔️ Buscar Rival Ahora",
       btn_cancel_match: "Cancelar búsqueda",
-      btn_play_ai: "🤖 Jugar vs Bot (1J)",
+      btn_jump_story: "🏯 Modo Historia",
+      btn_play_ai: "🤖 Bot Rápido (1J)",
       searching_status: "Buscando rival en tiempo real... Esperando a otro jugador...",
 
       // Academy Banner
@@ -254,7 +255,8 @@
       searching_rival_n: "{n} searching rival",
       btn_quick_match: "⚔️ Find Opponent Now",
       btn_cancel_match: "Cancel Search",
-      btn_play_ai: "🤖 Play vs AI Bot (1P)",
+      btn_jump_story: "🏯 Story Mode",
+      btn_play_ai: "🤖 Quick Bot (1P)",
       searching_status: "Searching for an opponent in real time... Waiting for another player...",
 
       // Academy Banner

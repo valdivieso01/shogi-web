@@ -3029,6 +3029,15 @@
         renderStoryCampaign();
       });
     }
+    const btnJumpStory = document.getElementById("btn-jump-story");
+    if (btnJumpStory) {
+      btnJumpStory.addEventListener("click", () => {
+        const sec = document.getElementById("story-campaign-section");
+        if (sec) {
+          sec.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
+    }
     renderStoryCampaign();
   }
 
