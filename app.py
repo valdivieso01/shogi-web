@@ -823,6 +823,30 @@ class GameRoom:
         )
         return "finished" if self.winner else ("playing" if both_ready else "waiting")
 
+    def _serialize_seat(self, color: str) -> dict:
+        p = self.players.get(color, {})
+        u = p.get("user") if isinstance(p.get("user"), dict) else None
+        picture = u.get("picture", "") if u else ""
+        rating = u.get("rating") if u else None
+        is_bot = p.get("token") == "AI_BOT"
+        story_chap = getattr(self, "story_chapter", None)
+        if color == "blanco" and story_chap and story_chap in STORY_CHAPTERS:
+            ch = STORY_CHAPTERS[story_chap]
+            picture = ch.get("portrait", "")
+            rating = ch.get("elo")
+        elif color == "blanco" and is_bot:
+            picture = "/static/icon-192.png"
+            rating = 1350
+        return {
+            "name": p.get("name", ""),
+            "connected": bool(p.get("connected")),
+            "picture": picture or "",
+            "rating": rating,
+            "is_registered": bool(u),
+            "is_bot": is_bot,
+            "story_chapter": story_chap if (color == "blanco" and story_chap) else None,
+        }
+
     def serialize_summary(self) -> dict:
         open_seat = None
         if not self.players["negro"]["connected"]:
@@ -841,14 +865,8 @@ class GameRoom:
             "open_seat": open_seat,
             "created_at": int(self.created_at),
             "players": {
-                "negro": {
-                    "name": self.players["negro"]["name"],
-                    "connected": self.players["negro"]["connected"],
-                },
-                "blanco": {
-                    "name": self.players["blanco"]["name"],
-                    "connected": self.players["blanco"]["connected"],
-                },
+                "negro": self._serialize_seat("negro"),
+                "blanco": self._serialize_seat("blanco"),
             },
         }
 
@@ -871,14 +889,8 @@ class GameRoom:
             "board": self.serialize_board(),
             "captured": self.serialize_captured(),
             "players": {
-                "negro": {
-                    "name": self.players["negro"]["name"],
-                    "connected": self.players["negro"]["connected"],
-                },
-                "blanco": {
-                    "name": self.players["blanco"]["name"],
-                    "connected": self.players["blanco"]["connected"],
-                },
+                "negro": self._serialize_seat("negro"),
+                "blanco": self._serialize_seat("blanco"),
             },
         }
 

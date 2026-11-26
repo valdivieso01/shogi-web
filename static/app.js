@@ -1356,6 +1356,7 @@
     if (!state.game) return;
     const bottomColor = state.flipped ? "blanco" : "negro";
     const topColor = state.flipped ? "negro" : "blanco";
+    const isEn = window.i18n && window.i18n.getLanguage() === "en";
 
     const updateSide = (prefix, color) => {
       const isNegro = color === "negro";
@@ -1365,22 +1366,90 @@
       const nameEl = document.getElementById(`${prefix}-player-name`);
       const turnTag = document.getElementById(`${prefix}-turn-tag`);
       const handGrid = document.getElementById(`${prefix}-hand-grid`);
+      const avatarImg = document.getElementById(`${prefix}-player-avatar`);
+      const komaFallback = document.getElementById(`${prefix}-player-koma-fallback`);
+      const badgesEl = document.getElementById(`${prefix}-player-badges`);
 
       sym.textContent = isNegro ? "☗" : "☖";
-      title.textContent = isNegro ? "Sente · Negro" : "Gote · Blanco";
+      title.textContent = isNegro
+        ? (isEn ? "Sente · Black (Moves 1st)" : "Sente · Negro (Mueve 1.º)")
+        : (isEn ? "Gote · White (Moves 2nd)" : "Gote · Blanco (Mueve 2.º)");
 
-      const pInfo = state.game.players[color];
+      const pInfo = state.game.players[color] || { name: "Esperando...", connected: false };
       const isMe = state.myColor === color;
-      nameEl.textContent = `${pInfo.name}${isMe ? " (Tú)" : ""}`;
+      nameEl.textContent = pInfo.name;
+
+      // Resolver foto / retrato del jugador de este lado
+      let pictureUrl = pInfo.picture || "";
+      let ratingVal = pInfo.rating || null;
+      let isRegistered = Boolean(pInfo.is_registered);
+
+      // Si soy yo y tengo sesión de Google activa en el cliente
+      if (isMe && state.authUser) {
+        if (!pictureUrl && state.authUser.picture) pictureUrl = state.authUser.picture;
+        if (!ratingVal && state.authUser.rating) ratingVal = state.authUser.rating;
+        isRegistered = true;
+      }
+
+      // Si es Modo Historia y es el rival Gote
+      if (color === "blanco" && state.game.story_chapter) {
+        const storyBoss = STORY_BOSSES.find((b) => b.chapter === Number(state.game.story_chapter));
+        if (storyBoss) {
+          pictureUrl = storyBoss.portrait;
+          ratingVal = storyBoss.elo;
+        }
+      }
+
+      if (avatarImg && komaFallback) {
+        if (pictureUrl) {
+          avatarImg.src = pictureUrl;
+          avatarImg.alt = pInfo.name;
+          avatarImg.hidden = false;
+          komaFallback.hidden = true;
+          avatarImg.onerror = () => {
+            avatarImg.hidden = true;
+            komaFallback.hidden = false;
+          };
+        } else {
+          avatarImg.hidden = true;
+          komaFallback.hidden = false;
+          komaFallback.textContent = isNegro ? "王" : "玉";
+          komaFallback.classList.toggle("points-down", prefix === "top");
+        }
+      }
+
+      if (badgesEl) {
+        const pills = [];
+        if (isMe) {
+          pills.push(`<span class="p-meta-pill is-you">${isEn ? "You" : "Tú"}</span>`);
+        }
+        if (state.game.story_chapter && color === "blanco") {
+          pills.push(`<span class="p-meta-pill is-elo">${isEn ? "Ch." : "Cap."} ${state.game.story_chapter}</span>`);
+        } else if (state.tutorialActive) {
+          pills.push(`<span class="p-meta-pill is-verified">${color === "negro" ? (isEn ? "Student" : "Alumno") : "Sensei"}</span>`);
+        } else if (pInfo.is_bot || (state.game.mode === "ai" && color === "blanco")) {
+          pills.push(`<span class="p-meta-pill">${isEn ? "Dojo AI" : "IA del Dojo"}</span>`);
+        } else if (isRegistered) {
+          pills.push(`<span class="p-meta-pill is-verified">${isEn ? "Registered" : "Registrado"}</span>`);
+        } else if (pInfo.connected) {
+          pills.push(`<span class="p-meta-pill">${isEn ? "Guest" : "Invitado"}</span>`);
+        }
+        if (ratingVal) {
+          pills.push(`<span class="p-meta-pill is-elo">${ratingVal} ELO</span>`);
+        }
+        badgesEl.innerHTML = pills.join("");
+      }
 
       const isTurn = !state.game.winner && state.game.turn === color;
       card.classList.toggle("active-turn", isTurn);
       turnTag.hidden = !isTurn;
-      turnTag.textContent = canControlColor(color) ? "Tu turno" : "Su turno";
+      turnTag.textContent = canControlColor(color)
+        ? (isEn ? "Your turn" : "Tu turno")
+        : (isEn ? "Their turn" : "Su turno");
 
       const hand = state.game.captured[color] || [];
       if (hand.length === 0) {
-        handGrid.innerHTML = `<p class="komadai-empty">Sin piezas capturadas</p>`;
+        handGrid.innerHTML = `<p class="komadai-empty">${isEn ? "No captured pieces" : "Sin piezas capturadas"}</p>`;
         return;
       }
 

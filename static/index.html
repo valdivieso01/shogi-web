@@ -37,7 +37,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Shippori+Mincho:wght@600;700;800&family=Yuji+Syuku&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/styles.css?v=26">
+  <link rel="stylesheet" href="/static/styles.css?v=27">
 
   <!-- Datos Estructurados JSON-LD (Schema.org WebSite + WebApplication + FAQPage) para indexado en Google -->
   <script type="application/ld+json">
@@ -482,16 +482,26 @@
       <!-- Columna Izquierda: Reserva Superior (Rival) + Estado -->
       <aside class="side-panel side-left" aria-label="Panel del jugador superior y reserva">
         <section class="player-card" id="top-player-card">
-          <div class="player-header">
-            <span class="player-symbol" id="top-player-symbol" aria-hidden="true">☖</span>
-            <div class="player-meta">
-              <h2 id="top-player-title" data-i18n="gote_title">Gote · Blanco</h2>
-              <p class="player-name" id="top-player-name" data-i18n="waiting_player">Esperando jugador...</p>
+          <div class="player-identity-header">
+            <div class="player-avatar-slot">
+              <img src="" alt="" class="player-avatar-img" id="top-player-avatar" width="52" height="52" hidden>
+              <div class="player-koma-avatar" id="top-player-koma-fallback" aria-hidden="true">玉</div>
+              <span class="player-side-crest" id="top-player-symbol" aria-hidden="true">☖</span>
             </div>
-            <span class="turn-tag" id="top-turn-tag" data-i18n="their_turn" hidden>Su turno</span>
+            <div class="player-meta">
+              <div class="player-title-row">
+                <span class="player-army-label" id="top-player-title" data-i18n="gote_title">Gote · Blanco</span>
+                <span class="turn-tag" id="top-turn-tag" data-i18n="their_turn" hidden>Su turno</span>
+              </div>
+              <p class="player-name" id="top-player-name" data-i18n="waiting_player">Esperando jugador...</p>
+              <div class="player-badges-row" id="top-player-badges"></div>
+            </div>
           </div>
           <div class="komadai" id="top-komadai" aria-label="Piezas capturadas del jugador superior">
-            <p class="komadai-title" data-i18n="komadai_top_title">Piezas en mano (Komadai)</p>
+            <div class="komadai-header-row">
+              <p class="komadai-title" data-i18n="komadai_top_title">Piezas en mano (Komadai)</p>
+              <span class="komadai-orient-hint">☖ Apuntan abajo</span>
+            </div>
             <div class="komadai-grid" id="top-hand-grid"></div>
           </div>
         </section>
@@ -583,16 +593,26 @@
       <!-- Columna Derecha: Reserva Inferior (Jugador Activo) + Historial -->
       <aside class="side-panel side-right" aria-label="Panel del jugador inferior e historial">
         <section class="player-card player-card-active" id="bottom-player-card">
-          <div class="player-header">
-            <span class="player-symbol" id="bottom-player-symbol" aria-hidden="true">☗</span>
-            <div class="player-meta">
-              <h2 id="bottom-player-title" data-i18n="sente_title">Sente · Negro</h2>
-              <p class="player-name" id="bottom-player-name" data-i18n="waiting_player">Esperando jugador...</p>
+          <div class="player-identity-header">
+            <div class="player-avatar-slot">
+              <img src="" alt="" class="player-avatar-img" id="bottom-player-avatar" width="52" height="52" hidden>
+              <div class="player-koma-avatar" id="bottom-player-koma-fallback" aria-hidden="true">王</div>
+              <span class="player-side-crest" id="bottom-player-symbol" aria-hidden="true">☗</span>
             </div>
-            <span class="turn-tag" id="bottom-turn-tag" data-i18n="your_turn" hidden>Tu turno</span>
+            <div class="player-meta">
+              <div class="player-title-row">
+                <span class="player-army-label" id="bottom-player-title" data-i18n="sente_title">Sente · Negro</span>
+                <span class="turn-tag" id="bottom-turn-tag" data-i18n="your_turn" hidden>Tu turno</span>
+              </div>
+              <p class="player-name" id="bottom-player-name" data-i18n="waiting_player">Esperando jugador...</p>
+              <div class="player-badges-row" id="bottom-player-badges"></div>
+            </div>
           </div>
           <div class="komadai" id="bottom-komadai" aria-label="Piezas capturadas del jugador inferior">
-            <p class="komadai-title" data-i18n="komadai_bottom_title">Piezas en mano (clic para reincorporar)</p>
+            <div class="komadai-header-row">
+              <p class="komadai-title" data-i18n="komadai_bottom_title">Piezas en mano (clic para reincorporar)</p>
+              <span class="komadai-orient-hint">☗ Apuntan arriba</span>
+            </div>
             <div class="komadai-grid" id="bottom-hand-grid"></div>
           </div>
         </section>
@@ -856,6 +876,6 @@
   </dialog>
 
   <script src="/static/i18n.js?v=8"></script>
-  <script src="/static/app.js?v=30" defer></script>
+  <script src="/static/app.js?v=31" defer></script>
 </body>
 </html>
