@@ -3,6 +3,7 @@ Dojo Shogi Online - Database Layer
 Supports PostgreSQL (Neon / Supabase via DATABASE_URL) and fallback to local SQLite (shogi.db).
 """
 
+import json
 import os
 import sqlite3
 import time
@@ -147,6 +148,11 @@ def init_db():
                     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
+                CREATE TABLE IF NOT EXISTS active_rooms (
+                    room_code VARCHAR(32) PRIMARY KEY,
+                    state_json TEXT NOT NULL,
+                    updated_at DOUBLE PRECISION NOT NULL
+                );
                 """)
             else:
                 cur.execute("""
@@ -190,6 +196,13 @@ def init_db():
                     user_id INTEGER NOT NULL,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (user_id) REFERENCES users(id)
+                );
+                """)
+                cur.execute("""
+                CREATE TABLE IF NOT EXISTS active_rooms (
+                    room_code TEXT PRIMARY KEY,
+                    state_json TEXT NOT NULL,
+                    updated_at REAL NOT NULL
                 );
                 """)
             conn.commit()
@@ -463,3 +476,57 @@ def get_admin_users(limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
     LIMIT ? OFFSET ?
     """
     return _run_query(query, (limit, offset), fetch_all=True) or []
+
+
+def save_active_room(room_code: str, state_dict: Dict[str, Any], updated_at: float):
+    """Persists active GameRoom state so Vercel serverless instances share rooms without 404s."""
+    try:
+        payload = json.dumps(state_dict)
+        if _IS_POSTGRES:
+            _run_query(
+                """
+                INSERT INTO active_rooms (room_code, state_json, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT (room_code) DO UPDATE
+                SET state_json = EXCLUDED.state_json, updated_at = EXCLUDED.updated_at
+                """,
+                (room_code, payload, float(updated_at)),
+            )
+        else:
+            _run_query(
+                "INSERT OR REPLACE INTO active_rooms (room_code, state_json, updated_at) VALUES (?, ?, ?)",
+                (room_code, payload, float(updated_at)),
+            )
+    except Exception as exc:
+        print(f"[database] save_active_room error for {room_code}: {exc}")
+
+
+def load_active_room(room_code: str) -> Optional[Dict[str, Any]]:
+    """Loads persisted GameRoom state from database when a serverless worker does not have it in RAM."""
+    try:
+        row = _run_query(
+            "SELECT state_json FROM active_rooms WHERE room_code = ?",
+            (room_code,),
+            fetch_one=True,
+        )
+        if row and row.get("state_json"):
+            return json.loads(row["state_json"])
+    except Exception as exc:
+        print(f"[database] load_active_room error for {room_code}: {exc}")
+    return None
+
+
+def delete_active_room(room_code: str):
+    """Removes an expired or closed room from active_rooms."""
+    try:
+        _run_query("DELETE FROM active_rooms WHERE room_code = ?", (room_code,))
+    except Exception:
+        pass
+
+
+def cleanup_old_active_rooms(cutoff_timestamp: float):
+    """Deletes rooms older than cutoff_timestamp."""
+    try:
+        _run_query("DELETE FROM active_rooms WHERE updated_at < ?", (float(cutoff_timestamp),))
+    except Exception:
+        pass

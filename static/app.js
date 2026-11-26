@@ -1708,7 +1708,15 @@
     window.history.pushState({}, "", url.toString());
 
     switchView("game");
-    connectRoomStream(state.roomCode);
+    if (state.game && state.game.mode === "online") {
+      connectRoomStream(state.roomCode);
+    } else {
+      if (state.roomSource) {
+        state.roomSource.close();
+        state.roomSource = null;
+      }
+      connDot.classList.add("online");
+    }
     renderGameAll();
   }
 

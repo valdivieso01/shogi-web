@@ -306,6 +306,24 @@ def format_coord(row: int, col: int) -> str:
     return f"{shogi_col}{shogi_row} ({row},{col})"
 
 
+def build_piece_instance(code: str, color: str, promoted: bool = False):
+    if code == "K":
+        return Rey(color, "K", False)
+    if code == "G":
+        return GeneralOro(color, "G")
+    if code == "R":
+        return Torre(bool(promoted), color, "R")
+    if code == "B":
+        return Alfil(bool(promoted), color, "B")
+    if code == "S":
+        return GeneralPlata(bool(promoted), color, "S")
+    if code == "N":
+        return Caballo(bool(promoted), color, "N")
+    if code == "L":
+        return Lancero(bool(promoted), color, "L")
+    return Peon(bool(promoted), color, "P")
+
+
 class GameRoom:
     def __init__(
         self,
@@ -853,7 +871,110 @@ class GameRoom:
             },
         }
 
+    def to_snapshot(self) -> dict:
+        grid = []
+        for r in range(9):
+            row_data = []
+            for c in range(9):
+                p = self.tablero.tab[r][c]
+                if p is None:
+                    row_data.append(None)
+                else:
+                    row_data.append(
+                        {
+                            "code": p.nombre,
+                            "color": p.color,
+                            "promoted": bool(getattr(p, "promocion", False)),
+                        }
+                    )
+            grid.append(row_data)
+
+        dead = [
+            {"code": p.nombre, "color": p.color}
+            for p in self.tablero.piezas_muertas
+        ]
+        return {
+            "code": self.code,
+            "mode": self.mode,
+            "visibility": self.visibility,
+            "title": self.title,
+            "owner_ip": self.owner_ip,
+            "story_chapter": self.story_chapter,
+            "ai_level": self.ai_level,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            "turn": self.turn,
+            "in_check": self.in_check,
+            "winner": self.winner,
+            "reason": self.reason,
+            "last_move": self.last_move,
+            "history": self.history[-40:],
+            "move_count": self.move_count,
+            "recorded_in_db": getattr(self, "_recorded_in_db", False),
+            "players": self.players,
+            "grid": grid,
+            "dead": dead,
+        }
+
+    def apply_snapshot(self, snap: dict):
+        self.mode = snap.get("mode", self.mode)
+        self.visibility = snap.get("visibility", self.visibility)
+        self.title = snap.get("title", self.title)
+        self.owner_ip = snap.get("owner_ip", self.owner_ip)
+        self.story_chapter = snap.get("story_chapter", self.story_chapter)
+        self.ai_level = snap.get("ai_level", self.ai_level)
+        self.created_at = float(snap.get("created_at", self.created_at))
+        self.updated_at = float(snap.get("updated_at", self.updated_at))
+        self.turn = snap.get("turn", "negro")
+        self.in_check = snap.get("in_check")
+        self.winner = snap.get("winner")
+        self.reason = snap.get("reason")
+        self.last_move = snap.get("last_move")
+        self.history = snap.get("history", [])
+        self.move_count = int(snap.get("move_count", 0))
+        self._recorded_in_db = bool(snap.get("recorded_in_db", False))
+        if "players" in snap and isinstance(snap["players"], dict):
+            self.players = snap["players"]
+
+        grid = snap.get("grid")
+        if isinstance(grid, list) and len(grid) == 9:
+            for r in range(9):
+                for c in range(9):
+                    cell = grid[r][c]
+                    if cell is None:
+                        self.tablero.tab[r][c] = None
+                    else:
+                        self.tablero.tab[r][c] = build_piece_instance(
+                            cell["code"],
+                            cell["color"],
+                            bool(cell.get("promoted", False)),
+                        )
+        dead = snap.get("dead")
+        if isinstance(dead, list):
+            self.tablero.piezas_muertas = [
+                build_piece_instance(d["code"], d["color"], False) for d in dead
+            ]
+        self.tablero.juego = "terminado" if self.winner else "iniciado"
+
+    @classmethod
+    def from_snapshot(cls, snap: dict) -> "GameRoom":
+        room = cls(
+            code=snap["code"],
+            mode=snap.get("mode", "online"),
+            visibility=snap.get("visibility", "public"),
+            title=snap.get("title", ""),
+            owner_ip=snap.get("owner_ip", ""),
+            ai_level=snap.get("ai_level", 3),
+            story_chapter=snap.get("story_chapter"),
+        )
+        room.apply_snapshot(snap)
+        return room
+
+    def persist(self):
+        database.save_active_room(self.code, self.to_snapshot(), self.updated_at)
+
     def broadcast(self):
+        self.persist()
         payload = json.dumps(self.serialize())
         dead = []
         for q in self.subscribers:
@@ -891,6 +1012,7 @@ def cleanup_expired_resources():
                 expired_codes.append(code)
         for code in expired_codes:
             del ROOMS[code]
+            database.delete_active_room(code)
 
 
 def get_room_or_404(code: str) -> GameRoom | None:
@@ -899,7 +1021,19 @@ def get_room_or_404(code: str) -> GameRoom | None:
         return None
     cleanup_expired_resources()
     with ROOMS_LOCK:
-        return ROOMS.get(clean)
+        room = ROOMS.get(clean)
+        snap = database.load_active_room(clean)
+        if snap:
+            if room is None:
+                room = GameRoom.from_snapshot(snap)
+                ROOMS[clean] = room
+            elif (
+                snap.get("move_count", 0) != room.move_count
+                or float(snap.get("updated_at", 0)) > room.updated_at
+                or snap.get("winner") != room.winner
+            ):
+                room.apply_snapshot(snap)
+        return room
 
 
 class LobbyManager:
@@ -1030,11 +1164,11 @@ def add_security_and_cache_headers(response):
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.google.com https://*.doubleclick.net https://accounts.google.com; "
+        "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.google.com https://*.doubleclick.net https://accounts.google.com https://*.adtrafficquality.google; "
         "style-src 'self' 'unsafe-inline' https://accounts.google.com; "
         "img-src 'self' data: https:; "
         "connect-src 'self' https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.google.com https://accounts.google.com https://*.adtrafficquality.google; "
-        "frame-src https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.google.com https://accounts.google.com; "
+        "frame-src https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.google.com https://accounts.google.com https://*.adtrafficquality.google; "
         "frame-ancestors 'none';"
     )
     return response
@@ -2492,6 +2626,7 @@ def create_room():
             room.players[preferred_color] = {"token": token, "name": player_name, "connected": True, "ip": ip, "user": auth_user}
             assigned_color = preferred_color
         ROOMS[code] = room
+        room.persist()
 
     broadcast_lobby()
     return jsonify(
@@ -2878,17 +3013,33 @@ def stream_room(room_code: str):
         initial_payload = json.dumps(room.serialize())
 
     def event_stream():
+        last_seen_move = room.move_count
+        last_seen_updated = room.updated_at
         try:
             yield f"data: {initial_payload}\n\n"
             while True:
                 try:
-                    msg = q.get(timeout=20)
+                    msg = q.get(timeout=4)
                     if msg == "__CLOSE_REPLACED_BY_SAME_IP__":
                         yield f'data: {json.dumps({"replaced_by_same_ip": True})}\n\n'
                         break
+                    last_seen_move = room.move_count
+                    last_seen_updated = room.updated_at
                     yield f"data: {msg}\n\n"
                 except queue.Empty:
-                    yield ": keepalive\n\n"
+                    snap = database.load_active_room(room.code)
+                    if snap and (
+                        snap.get("move_count", 0) != last_seen_move
+                        or float(snap.get("updated_at", 0)) > last_seen_updated
+                    ):
+                        with room.lock:
+                            room.apply_snapshot(snap)
+                            last_seen_move = room.move_count
+                            last_seen_updated = room.updated_at
+                            synced_payload = json.dumps(room.serialize())
+                        yield f"data: {synced_payload}\n\n"
+                    else:
+                        yield ": keepalive\n\n"
         finally:
             SECURITY.unregister_room_sse(ip, q)
             with room.lock:
