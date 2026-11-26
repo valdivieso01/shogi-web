@@ -2511,13 +2511,13 @@
             let rankBadge = `${idx + 1}`;
             let rankClass = "";
             if (idx === 0) {
-              rankBadge = "🥇 1";
+              rankBadge = "I";
               rankClass = "rank-1";
             } else if (idx === 1) {
-              rankBadge = "🥈 2";
+              rankBadge = "II";
               rankClass = "rank-2";
             } else if (idx === 2) {
-              rankBadge = "🥉 3";
+              rankBadge = "III";
               rankClass = "rank-3";
             }
             const avatarSrc = p.picture || "/static/icon-48.png";
@@ -2563,7 +2563,7 @@
               reasonLabel = isEn ? "Draw" : "Tablas";
             }
             const storyBadge = m.story_chapter
-              ? `<span class="match-reason-badge" style="background:rgba(188,42,30,0.28); color:#ffd4cc; border-color:rgba(226,180,90,0.45);">🏯 ${isEn ? "Story Ch." : "Historia Cap."} ${m.story_chapter}</span>`
+              ? `<span class="match-reason-badge" style="background:rgba(184,41,29,0.22); color:#ffd4cc; border-color:rgba(217,173,101,0.4);">${isEn ? "Story Ch." : "Historia Cap."} ${m.story_chapter}</span>`
               : "";
             return `
               <div class="match-item-card">
@@ -2571,12 +2571,12 @@
                   <div class="match-player-line ${senteWinner ? "winner" : ""}">
                     <span>☗</span>
                     <span>${escapeHTML(m.sente_name)}</span>
-                    ${senteWinner ? "🏆" : ""}
+                    ${senteWinner ? "· Victoria" : ""}
                   </div>
                   <div class="match-player-line ${goteWinner ? "winner" : ""}">
                     <span>☖</span>
                     <span>${escapeHTML(m.gote_name)}</span>
-                    ${goteWinner ? "🏆" : ""}
+                    ${goteWinner ? "· Victoria" : ""}
                   </div>
                 </div>
                 <div class="match-meta-right">
@@ -2877,36 +2877,36 @@
     }
     if (pill) {
       pill.textContent = isEn
-        ? `🏆 ${prog.completed.length} / 5 Defeated`
-        : `🏆 ${prog.completed.length} / 5 Derrotados`;
+        ? `${prog.completed.length} / 5 Defeated`
+        : `${prog.completed.length} / 5 Derrotados`;
     }
     if (btnUnlock) {
       btnUnlock.hidden = !isAdmin;
       btnUnlock.textContent = freePlayActive
-        ? (isEn ? "🔒 Progressive Mode (Admin)" : "🔒 Modo Progresivo (Admin)")
-        : (isEn ? "🔓 Unlock All (Admin)" : "🔓 Modo Libre (Admin)");
+        ? (isEn ? "Progressive Mode (Admin)" : "Modo Progresivo (Admin)")
+        : (isEn ? "Unlock All (Admin)" : "Modo Libre (Admin)");
     }
 
     grid.innerHTML = STORY_BOSSES.map((b) => {
       const isDone = prog.completed.includes(b.chapter);
       const isUnlocked = b.chapter === 1 || prog.completed.includes(b.chapter - 1) || freePlayActive || isDone;
       const isNext = !isDone && (b.chapter === 1 || prog.completed.includes(b.chapter - 1));
-      const starsStr = "⭐".repeat(b.stars);
+      const starsStr = "★".repeat(b.stars) + "☆".repeat(5 - b.stars);
 
       let statusBadge = "";
       if (isDone) {
-        statusBadge = `<span class="story-status-tag done">✅ ${isEn ? "Defeated" : "Derrotado"}</span>`;
+        statusBadge = `<span class="story-status-tag done">${isEn ? "Defeated" : "Derrotado"}</span>`;
       } else if (isUnlocked) {
-        statusBadge = `<span class="story-status-tag ready">⚔️ ${isEn ? "Available" : "Disponible"}</span>`;
+        statusBadge = `<span class="story-status-tag ready">${isEn ? "Available" : "Disponible"}</span>`;
       } else {
-        statusBadge = `<span class="story-status-tag locked">🔒 ${isEn ? "Locked" : "Bloqueado"}</span>`;
+        statusBadge = `<span class="story-status-tag locked">${isEn ? "Locked" : "Bloqueado"}</span>`;
       }
 
       const btnLabel = isDone
-        ? (isEn ? "⚔️ Rematch" : "⚔️ Revancha")
+        ? (isEn ? "Rematch" : "Revancha")
         : isUnlocked
-          ? (isEn ? `⚔️ Challenge Ch. ${b.chapter}` : `⚔️ Desafiar Cap. ${b.chapter}`)
-          : (isEn ? `🔒 Win Ch. ${b.chapter - 1} first` : `🔒 Vence el Cap. ${b.chapter - 1}`);
+          ? (isEn ? `Challenge Ch. ${b.chapter} →` : `Desafiar Cap. ${b.chapter} →`)
+          : (isEn ? `Win Ch. ${b.chapter - 1} first` : `Vence el Cap. ${b.chapter - 1}`);
 
       const cardClasses = [
         "story-boss-card",
@@ -2996,7 +2996,7 @@
     document.getElementById("story-hud-chapter-badge").textContent = isEn
       ? `Chapter ${boss.chapter} of 5`
       : `Capítulo ${boss.chapter} de 5`;
-    document.getElementById("story-hud-stars").textContent = `${"⭐".repeat(boss.stars)} · ${boss.elo} ELO`;
+    document.getElementById("story-hud-stars").textContent = `${"★".repeat(boss.stars)} · ${boss.elo} ELO`;
     document.getElementById("story-hud-era").textContent = boss.era[lang];
     document.getElementById("story-hud-name").textContent = `${boss.name} (${boss.kanji}) — ${boss.role[lang]}`;
 
@@ -3011,12 +3011,12 @@
           const nextBoss = STORY_BOSSES.find((b) => b.chapter === boss.chapter + 1);
           nextBtn.hidden = false;
           nextBtn.textContent = isEn
-            ? `⚔️ Next Chapter: ${nextBoss.name} →`
-            : `⚔️ Siguiente: ${nextBoss.name} →`;
+            ? `Next Chapter: ${nextBoss.name} →`
+            : `Siguiente: ${nextBoss.name} →`;
           nextBtn.onclick = () => startStoryChapter(boss.chapter + 1);
         } else {
           nextBtn.hidden = false;
-          nextBtn.textContent = isEn ? "🏆 Campaign Completed! Back to Dojo" : "🏆 ¡Campaña Completada! Volver al Dojo";
+          nextBtn.textContent = isEn ? "Campaign Completed! Back to Dojo" : "¡Campaña Completada! Volver al Dojo";
           nextBtn.onclick = () => returnToLobby();
         }
       }

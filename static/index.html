@@ -37,7 +37,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Shippori+Mincho:wght@600;700;800&family=Yuji+Syuku&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/styles.css?v=22">
+  <link rel="stylesheet" href="/static/styles.css?v=23">
 
   <!-- Datos Estructurados JSON-LD (Schema.org WebSite + WebApplication + FAQPage) para indexado en Google -->
   <script type="application/ld+json">
@@ -137,7 +137,7 @@
       <!-- Selector de Idioma -->
       <div class="lang-switch-pill" role="group" aria-label="Selector de idioma / Language selector">
         <button type="button" class="btn-lang-toggle" id="btn-toggle-lang" title="Cambiar idioma (Español / English)">
-          🌐 <span id="current-lang-label">ES</span>
+          <span id="current-lang-label">ES</span>
         </button>
       </div>
 
@@ -153,7 +153,7 @@
           <span data-i18n="btn_login_google">Iniciar con Google</span>
         </button>
         <div class="user-profile-widget" id="user-profile-widget" hidden>
-          <a href="/admin" class="btn-admin-pill" id="btn-admin-topbar" title="Panel de Administración" hidden>🛡️ Admin</a>
+          <a href="/admin" class="btn-admin-pill" id="btn-admin-topbar" title="Panel de Administración" hidden>Admin</a>
           <img src="" alt="Avatar" class="user-avatar-top" id="user-avatar-top" width="26" height="26">
           <div class="user-meta-top">
             <span class="user-name-top" id="user-name-top"></span>
@@ -178,11 +178,11 @@
         Girar tablero
       </button>
       <button type="button" class="btn btn-accent" id="btn-start-tutorial-top" data-i18n="btn_learn_play">
-        🎓 Aprender a Jugar
+        Academia (12)
       </button>
       <div class="audio-control-pill" role="group" aria-label="Control de música relajante del Dojo">
         <button type="button" class="btn-audio-toggle" id="btn-toggle-music" aria-pressed="false">
-          🎵 Música: OFF
+          Sonido: OFF
         </button>
         <input
           type="range"
@@ -200,8 +200,8 @@
       <button type="button" class="btn" id="btn-open-rules" data-i18n="btn_rules_top">
         Glosario y Reglas
       </button>
-      <button type="button" class="btn btn-danger" id="btn-open-bug-report" data-i18n="btn_bug_top">
-        🐞 Reportar Error
+      <button type="button" class="btn" id="btn-open-bug-report" data-i18n="btn_bug_top">
+        Reportar
       </button>
     </div>
   </header>
@@ -231,16 +231,16 @@
             </span>
             <span class="queue-badge" id="queue-count-badge">0 buscando rival</span>
             <button type="button" class="btn btn-primary btn-lg" id="btn-quick-match" data-i18n="btn_quick_match">
-              ⚔️ Buscar Rival Ahora
+              ☗ Buscar Rival Ahora
             </button>
             <button type="button" class="btn btn-danger btn-lg" id="btn-cancel-match" data-i18n="btn_cancel_match" hidden>
               Cancelar búsqueda
             </button>
             <button type="button" class="btn btn-accent btn-lg" id="btn-jump-story" data-i18n="btn_jump_story">
-              🏯 Modo Historia
+              Modo Historia
             </button>
             <button type="button" class="btn btn-lg" id="btn-play-ai-quick" data-i18n="btn_play_ai">
-              🤖 Bot Rápido (1J)
+              Práctica vs IA
             </button>
           </div>
         </div>
@@ -251,11 +251,11 @@
         <div class="tutorial-banner-info">
           <div class="tutorial-top-row">
             <div>
-              <span class="tutorial-tag" data-i18n="academy_badge">🎓 Academia Interactiva Completa · 12 Lecciones con Diagramas</span>
+              <span class="tutorial-tag" data-i18n="academy_badge">Academia Interactiva Completa · 12 Lecciones con Diagramas</span>
               <h2 id="tutorial-lobby-heading" data-i18n="academy_heading">Curso Paso a Paso: Cómo Mueve Cada Pieza, Reglas y Tácticas</h2>
             </div>
             <button type="button" class="btn btn-primary" id="btn-start-tutorial-hero" data-i18n="btn_start_course">
-              🎓 Empezar Curso desde Lección 1
+              Empezar Curso desde Lección 1 →
             </button>
           </div>
           <p data-i18n="academy_desc" class="tutorial-compact-desc">
@@ -263,18 +263,18 @@
             <strong>Rey</strong>, <strong>General de Oro</strong>, <strong>General de Plata</strong>, <strong>Peón y Tokin</strong>, <strong>Lancero</strong>, <strong>Caballo</strong>, <strong>Alfil y Caballo Dragón</strong>, <strong>Torre y Dragón</strong>, <strong>Reincorporaciones (Drops)</strong>, prohibiciones (<strong>Nifu y Uchifuzume</strong>), <strong>Defensa de Jaque</strong> y <strong>Jaque Mate</strong>.
           </p>
           <div class="tutorial-chapters-pills" id="tutorial-chapters-pills">
-            <button type="button" class="chapter-pill" data-step="0">1. El Rey (王 · K)</button>
-            <button type="button" class="chapter-pill" data-step="1">2. General de Oro (金 · G)</button>
-            <button type="button" class="chapter-pill" data-step="2">3. General de Plata (銀 · S)</button>
-            <button type="button" class="chapter-pill" data-step="3">4. Peón y Tokin (歩 → と)</button>
-            <button type="button" class="chapter-pill" data-step="4">5. El Lancero (香 · L)</button>
-            <button type="button" class="chapter-pill" data-step="5">6. El Caballo (桂 · N)</button>
-            <button type="button" class="chapter-pill" data-step="6">7. Alfil y C.Dragón (角 → 馬)</button>
-            <button type="button" class="chapter-pill" data-step="7">8. Torre y Dragón (飛 → 龍)</button>
-            <button type="button" class="chapter-pill" data-step="8">9. Reincorporar (Drops)</button>
-            <button type="button" class="chapter-pill" data-step="9">10. Reglas Nifu y Uchifuzume</button>
-            <button type="button" class="chapter-pill" data-step="10">11. Defender un Jaque</button>
-            <button type="button" class="chapter-pill" data-step="11">12. Jaque Mate (Atama-kin)</button>
+            <button type="button" class="chapter-pill" data-step="0">01 · El Rey (王 · K)</button>
+            <button type="button" class="chapter-pill" data-step="1">02 · General de Oro (金 · G)</button>
+            <button type="button" class="chapter-pill" data-step="2">03 · General de Plata (銀 · S)</button>
+            <button type="button" class="chapter-pill" data-step="3">04 · Peón y Tokin (歩 → と)</button>
+            <button type="button" class="chapter-pill" data-step="4">05 · El Lancero (香 · L)</button>
+            <button type="button" class="chapter-pill" data-step="5">06 · El Caballo (桂 · N)</button>
+            <button type="button" class="chapter-pill" data-step="6">07 · Alfil y C.Dragón (角 → 馬)</button>
+            <button type="button" class="chapter-pill" data-step="7">08 · Torre y Dragón (飛 → 龍)</button>
+            <button type="button" class="chapter-pill" data-step="8">09 · Reincorporar (Drops)</button>
+            <button type="button" class="chapter-pill" data-step="9">10 · Reglas Nifu y Uchifuzume</button>
+            <button type="button" class="chapter-pill" data-step="10">11 · Defender un Jaque</button>
+            <button type="button" class="chapter-pill" data-step="11">12 · Jaque Mate (Atama-kin)</button>
           </div>
         </div>
       </section>
@@ -282,16 +282,16 @@
       <!-- 2. BARRA DE PESTAÑAS DEL DOJO (TODO A LA VISTA EN LA MISMA PANTALLA SIN HACER SCROLL) -->
       <nav class="lobby-hub-tabs" role="tablist" aria-label="Secciones principales del Dojo">
         <button type="button" class="lobby-hub-tab active" role="tab" aria-selected="true" data-hub-tab="online" id="hub-tab-btn-online">
-          <span class="hub-tab-icon" aria-hidden="true">⚔️</span>
+          <span class="hub-tab-icon" aria-hidden="true">対</span>
           <span data-i18n="tab_online_lobby">Salas Online y Partidas en Vivo</span>
         </button>
         <button type="button" class="lobby-hub-tab" role="tab" aria-selected="false" data-hub-tab="story" id="hub-tab-btn-story">
-          <span class="hub-tab-icon" aria-hidden="true">🏯</span>
+          <span class="hub-tab-icon" aria-hidden="true">伝</span>
           <span data-i18n="tab_story_mode">Modo Historia: Crónicas del Sengoku</span>
           <span class="hub-tab-badge" id="hub-story-badge">0/5</span>
         </button>
         <button type="button" class="lobby-hub-tab" role="tab" aria-selected="false" data-hub-tab="ranking" id="hub-tab-btn-ranking">
-          <span class="hub-tab-icon" aria-hidden="true">🏆</span>
+          <span class="hub-tab-icon" aria-hidden="true">位</span>
           <span data-i18n="tab_hall_of_fame">Salón de la Fama y Últimas Partidas</span>
         </button>
       </nav>
@@ -347,15 +347,15 @@
       <section class="story-campaign-card" id="story-campaign-section" role="tabpanel" aria-labelledby="story-campaign-heading" hidden>
         <div class="story-campaign-header">
           <div class="story-campaign-title-wrap">
-            <span class="story-tag" data-i18n="story_badge">🏯 Modo Historia · Campaña de 5 Capítulos (1 Jugador)</span>
+            <span class="story-tag" data-i18n="story_badge">Modo Historia · Campaña de 5 Capítulos (1 Jugador)</span>
             <h2 id="story-campaign-heading" data-i18n="story_heading">Crónicas del Sengoku: El Camino del Shōgun (戦国将棋伝)</h2>
             <p data-i18n="story_desc">
               Enfrenta en orden cronológico y táctico a 5 figuras legendarias del Japón feudal: desde un soldado de infantería <em>Ashigaru</em> hasta el mítico <em>Meijin</em> <strong>Ōhashi Sōkei</strong>.
             </p>
           </div>
           <div class="story-campaign-controls">
-            <span class="story-progress-pill" id="story-progress-pill">🏆 0 / 5 Derrotados</span>
-            <button type="button" class="btn btn-sm" id="btn-story-unlock-all" data-i18n="btn_story_unlock_all" hidden>🔓 Modo Libre</button>
+            <span class="story-progress-pill" id="story-progress-pill">0 / 5 Derrotados</span>
+            <button type="button" class="btn btn-sm" id="btn-story-unlock-all" data-i18n="btn_story_unlock_all" hidden>Modo Libre</button>
           </div>
         </div>
         <div class="story-chapters-grid" id="story-chapters-grid" aria-live="polite"></div>
@@ -367,7 +367,7 @@
           <!-- Salón de la Fama -->
           <div class="stats-card leaderboard-card">
             <div class="panel-header">
-              <h2 id="leaderboard-heading" data-i18n="leaderboard_title">🏆 Salón de la Fama (Top Jugadores)</h2>
+              <h2 id="leaderboard-heading" data-i18n="leaderboard_title">Salón de la Fama (Top Jugadores)</h2>
               <span class="badge-tag" data-i18n="leaderboard_tag">Competitivo</span>
             </div>
             <div class="leaderboard-table-wrap">
@@ -395,7 +395,7 @@
           <!-- Historial de Partidas Recientes -->
           <div class="stats-card recent-matches-card">
             <div class="panel-header">
-              <h2 data-i18n="recent_matches_title">📜 Últimas Partidas Disputadas</h2>
+              <h2 data-i18n="recent_matches_title">Últimas Partidas Disputadas</h2>
               <span class="badge-tag" data-i18n="matches_tag">En Vivo</span>
             </div>
             <div class="recent-matches-list" id="recent-matches-list">
@@ -410,19 +410,19 @@
         <h2 id="seo-guide-heading" data-i18n="seo_heading">¿Qué es el Shōgi (<span lang="ja">将棋</span>) y cómo funciona el Ajedrez Japonés?</h2>
         <div class="seo-editorial-grid">
           <article class="seo-article-card">
-            <h3 data-i18n="seo_art1_title">🏯 El Tablero 9×9 y las Fichas Pentagonales (Koma)</h3>
+            <h3 data-i18n="seo_art1_title">I · El Tablero 9×9 y las Fichas Pentagonales (Koma)</h3>
             <p data-i18n="seo_art1_text">
               El <strong>Shōgi</strong>, conocido en Japón como el <em>Juego de los Generales</em>, se disputa sobre un tablero rectangular de 9 filas por 9 columnas (<em>Shōgiban</em>). A diferencia del ajedrez occidental, todas las piezas tienen el mismo color de madera: la pertenencia a cada jugador —<strong>Sente (☗ Negro, quien mueve primero)</strong> o <strong>Gote (☖ Blanco)</strong>— se identifica por la dirección hacia la que apunta la punta de cada ficha pentagonal.
             </p>
           </article>
           <article class="seo-article-card">
-            <h3 data-i18n="seo_art2_title">🔄 La Regla de Reincorporación (Drops / <span lang="ja">打ち</span>)</h3>
+            <h3 data-i18n="seo_art2_title">II · La Regla de Reincorporación (Drops / <span lang="ja">打ち</span>)</h3>
             <p data-i18n="seo_art2_text">
               La característica estratégica que hace único al Shōgi en todo el mundo es que <strong>las piezas capturadas nunca mueren</strong>. Cuando capturas una ficha del adversario, esta pierde su promoción, pasa a tu soporte lateral (<em>Komadai</em>) y en cualquiera de tus turnos posteriores puedes gastarlo para <strong>reincorporarla en una casilla vacía</strong> como parte de tu propio ejército.
             </p>
           </article>
           <article class="seo-article-card">
-            <h3 data-i18n="seo_art3_title">⚡ Zona de Promoción (<span lang="ja">成り</span>) y Reglas Especiales</h3>
+            <h3 data-i18n="seo_art3_title">III · Zona de Promoción (<span lang="ja">成り</span>) y Reglas Especiales</h3>
             <p data-i18n="seo_art3_text">
               Las 3 filas más alejadas de cada jugador conforman la <strong>zona de promoción</strong>. Al entrar, moverse o salir de ella, los Peones, Lanceros, Caballos y Generales de Plata pueden promocionar para mover como un <strong>General de Oro</strong>, mientras que la Torre se corona en <strong>Rey Dragón (<span lang="ja">龍</span>)</strong> y el Alfil en <strong>Caballo Dragón (<span lang="ja">馬</span>)</strong>. El motor valida además las prohibiciones oficiales de <em>Nifu</em> (dos peones en la misma columna) y <em>Uchifuzume</em>.
             </p>
@@ -809,7 +809,7 @@
     </div>
   </dialog>
 
-  <script src="/static/i18n.js?v=6"></script>
-  <script src="/static/app.js?v=29" defer></script>
+  <script src="/static/i18n.js?v=7"></script>
+  <script src="/static/app.js?v=30" defer></script>
 </body>
 </html>
