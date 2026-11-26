@@ -2389,6 +2389,7 @@
       if (userProfileWidget) userProfileWidget.hidden = true;
       if (btnAdmin) btnAdmin.hidden = true;
     }
+    renderStoryCampaign();
   }
 
   async function handleLogout() {
@@ -2854,6 +2855,8 @@
     const isEn = window.i18n && window.i18n.getLanguage() === "en";
     const lang = isEn ? "en" : "es";
     const prog = loadStoryProgress();
+    const isAdmin = Boolean(state.authUser && state.authUser.is_admin);
+    const freePlayActive = isAdmin && prog.unlockAll;
 
     if (pill) {
       pill.textContent = isEn
@@ -2861,14 +2864,15 @@
         : `🏆 ${prog.completed.length} / 5 Derrotados`;
     }
     if (btnUnlock) {
-      btnUnlock.textContent = prog.unlockAll
-        ? (isEn ? "🔒 Progressive Mode" : "🔒 Modo Progresivo")
-        : (isEn ? "🔓 Unlock All (Free Play)" : "🔓 Modo Libre");
+      btnUnlock.hidden = !isAdmin;
+      btnUnlock.textContent = freePlayActive
+        ? (isEn ? "🔒 Progressive Mode (Admin)" : "🔒 Modo Progresivo (Admin)")
+        : (isEn ? "🔓 Unlock All (Admin)" : "🔓 Modo Libre (Admin)");
     }
 
     grid.innerHTML = STORY_BOSSES.map((b) => {
       const isDone = prog.completed.includes(b.chapter);
-      const isUnlocked = b.chapter === 1 || prog.completed.includes(b.chapter - 1) || prog.unlockAll || isDone;
+      const isUnlocked = b.chapter === 1 || prog.completed.includes(b.chapter - 1) || freePlayActive || isDone;
       const isNext = !isDone && (b.chapter === 1 || prog.completed.includes(b.chapter - 1));
       const starsStr = "⭐".repeat(b.stars);
 
@@ -3023,6 +3027,7 @@
     const btnUnlock = document.getElementById("btn-story-unlock-all");
     if (btnUnlock) {
       btnUnlock.addEventListener("click", () => {
+        if (!state.authUser || !state.authUser.is_admin) return;
         const prog = loadStoryProgress();
         prog.unlockAll = !prog.unlockAll;
         saveStoryProgress(prog);
