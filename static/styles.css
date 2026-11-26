@@ -361,11 +361,10 @@ h3 {
 
 .btn-dock-main {
   width: 100%;
-  padding-block: 0.75rem;
-  font-size: 0.95rem;
+  padding-block: 0.78rem;
+  font-size: 0.94rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  box-shadow: 0 6px 18px rgba(232, 185, 106, 0.22);
+  letter-spacing: 0.05em;
 }
 
 .dock-secondary-grid {
@@ -1576,58 +1575,99 @@ h3 {
   font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
 }
 
-/* Botones (Estilo Editorial Shōgiban) */
+/* Botones (Sistema de Color Japonés: Bermellón Shu-iro · Jade Tatami · Índigo Acero) */
 .btn {
-  padding-block: 0.44rem;
-  padding-inline: 0.88rem;
+  padding-block: 0.46rem;
+  padding-inline: 0.9rem;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-surface);
-  color: var(--text-main);
+  border: 1px solid rgba(148, 179, 224, 0.26);
+  background: linear-gradient(180deg, #1b2a44 0%, #131f33 100%);
+  color: #e6eef8;
   font-family: var(--font-sans);
   font-size: 0.84rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   cursor: pointer;
-  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
 }
 
 .btn:hover:not(:disabled) {
-  background: #1d2d47;
-  border-color: var(--accent-gold);
+  background: linear-gradient(180deg, #243859 0%, #1a2942 100%);
+  border-color: rgba(148, 179, 224, 0.55);
+  color: #ffffff;
 }
 
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+/* Acción Primaria de Combate: Laca Bermellón Samurái (Shu-iro 朱色) */
 .btn-primary {
-  background: var(--accent-gold);
-  color: #16110b;
-  border-color: var(--accent-gold);
+  background: linear-gradient(180deg, #d63627 0%, #a82015 100%);
+  color: #fff8f5;
+  border-color: #ef5a4a;
   font-weight: 700;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 210, 195, 0.32),
+    0 4px 14px rgba(184, 32, 21, 0.42);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--accent-gold-hover);
-  border-color: var(--accent-gold-hover);
+  background: linear-gradient(180deg, #e54232 0%, #bc261a 100%);
+  border-color: #ff7b6b;
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 225, 215, 0.42),
+    0 6px 18px rgba(214, 54, 39, 0.55);
 }
 
+/* Acción de Academia / Aprendizaje: Verde Jade Tatami (翠緑) */
+.btn-jade {
+  background: linear-gradient(180deg, #1e7f5c 0%, #145e43 100%);
+  color: #ecfdf5;
+  border-color: #34b384;
+  font-weight: 700;
+  box-shadow:
+    inset 0 1px 0 rgba(167, 243, 208, 0.28),
+    0 4px 14px rgba(20, 94, 67, 0.42);
+}
+
+.btn-jade:hover:not(:disabled) {
+  background: linear-gradient(180deg, #24946c 0%, #197050 100%);
+  border-color: #5eead4;
+  color: #ffffff;
+}
+
+/* Acción Secundaria Destacada: Índigo Real con filete luminoso */
 .btn-accent {
-  background: rgba(217, 173, 101, 0.1);
-  color: var(--accent-gold);
-  border-color: rgba(217, 173, 101, 0.42);
+  background: linear-gradient(180deg, #213757 0%, #172740 100%);
+  color: #f3d292;
+  border-color: rgba(232, 185, 106, 0.48);
+  box-shadow: inset 0 1px 0 rgba(232, 185, 106, 0.14), 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 
 .btn-accent:hover:not(:disabled) {
-  background: rgba(217, 173, 101, 0.18);
+  background: linear-gradient(180deg, #2b476f 0%, #1e3352 100%);
+  border-color: var(--accent-gold);
+  color: #ffe4ad;
 }
 
 .btn-danger {
-  background: rgba(184, 41, 29, 0.14);
-  color: #fca5a5;
-  border-color: rgba(184, 41, 29, 0.42);
+  background: rgba(184, 41, 29, 0.18);
+  color: #fecaca;
+  border-color: rgba(239, 68, 68, 0.48);
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: rgba(184, 41, 29, 0.24);
-  border-color: #ef4444;
+  background: rgba(214, 54, 39, 0.32);
+  border-color: #f87171;
+  color: #ffffff;
 }
 
 .btn-block {
@@ -2198,7 +2238,7 @@ dialog::backdrop {
   align-items: center;
   gap: 0.5rem;
   background: var(--bg-surface);
-  border: 1px solid var(--accent-gold);
+  border: 1px solid rgba(148, 179, 224, 0.35);
   padding: 0.2rem 0.55rem 0.2rem 0.25rem;
   border-radius: var(--radius-sm);
 }
@@ -2207,11 +2247,14 @@ dialog::backdrop {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  background: var(--accent-gold);
-  color: #0a101d !important;
-  font-size: 0.72rem;
+  background: linear-gradient(180deg, #b8291d 0%, #8f1c12 100%);
+  border: 1px solid rgba(255, 195, 180, 0.5);
+  color: #fff6f2 !important;
+  font-size: 0.7rem;
   font-weight: 800;
-  padding: 0.18rem 0.55rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.16rem 0.5rem;
   border-radius: var(--radius-sm);
   text-decoration: none !important;
   transition: filter 0.15s ease;
