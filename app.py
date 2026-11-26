@@ -1366,7 +1366,10 @@ def render_legal_page(
   <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
   <link rel="icon" type="image/svg+xml" href="/icon.svg">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-  <link rel="stylesheet" href="/static/styles.css?v=15">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Shippori+Mincho:wght@600;700;800&family=Yuji+Syuku&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css?v=22">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4665232577336299" crossorigin="anonymous"></script>
   <script>
     window.va = window.va || function () {{ (window.vaq = window.vaq || []).push(arguments); }};
@@ -1907,61 +1910,108 @@ def page_admin():
   <title>Panel de Administración | Dojo Shōgi Online</title>
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/static/styles.css?v=17">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Shippori+Mincho:wght@600;700;800&family=Yuji+Syuku&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css?v=22">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
-    .admin-container { max-width: 1200px; margin: 1.5rem auto 3.5rem; padding: 0 1rem; }
+    .admin-container { max-width: 1240px; margin: 1.25rem auto 3.5rem; padding: 0 1.25rem; }
     .admin-header-card {
-      background: #231913; border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 12px;
-      padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center;
-      flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-    }
-    .admin-title-wrap h1 { font-size: 1.4rem; color: #f1c40f; margin: 0 0 0.25rem; display: flex; align-items: center; gap: 0.5rem; }
-    .admin-title-wrap p { color: #a89f91; margin: 0; font-size: 0.85rem; }
-    .admin-actions { display: flex; align-items: center; gap: 0.75rem; }
-    .admin-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.75rem; }
-    .kpi-card {
-      background: #231913; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
-      padding: 1.1rem; display: flex; flex-direction: column; gap: 0.35rem; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      background:
+        radial-gradient(circle at 92% 15%, rgba(188, 42, 30, 0.16), transparent 48%),
+        linear-gradient(155deg, rgba(38, 25, 16, 0.98), rgba(18, 12, 8, 0.99));
+      border: 1px solid rgba(226, 180, 90, 0.42); border-radius: 14px;
+      padding: 1.35rem 1.6rem; display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 1rem; margin-bottom: 1.35rem;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.58), inset 0 1px 0 rgba(255,220,140,0.12);
       position: relative; overflow: hidden;
     }
-    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #d4af37, #f39c12); }
-    .kpi-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #a89f91; }
-    .kpi-value { font-size: 1.85rem; font-weight: 800; color: #fff; line-height: 1.1; }
-    .kpi-sub { font-size: 0.75rem; color: #8e8577; }
-    .admin-tabs { display: flex; gap: 0.5rem; border-bottom: 2px solid rgba(212, 175, 55, 0.2); margin-bottom: 1.25rem; }
-    .admin-tab-btn {
-      background: transparent; border: none; color: #a89f91; font-size: 0.95rem; font-weight: 600;
-      padding: 0.6rem 1.25rem; cursor: pointer; border-radius: 8px 8px 0 0; transition: all 0.2s;
+    .admin-header-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, #8b1e14, #d4af37, #f1c40f, #d4af37, #8b1e14);
     }
-    .admin-tab-btn.active { color: #fff; background: rgba(212, 175, 55, 0.15); border-bottom: 2px solid #f1c40f; }
-    .admin-panel { background: #231913; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1.25rem; box-shadow: 0 6px 18px rgba(0,0,0,0.3); }
+    .admin-title-wrap { display: flex; align-items: center; gap: 0.95rem; }
+    .admin-hanko-seal {
+      width: 44px; height: 44px; min-width: 44px; border-radius: 6px;
+      background: linear-gradient(145deg, #c6281c, #96180f);
+      border: 1.5px solid rgba(255, 232, 214, 0.85);
+      box-shadow: inset 0 0 0 2px #96180f, 0 4px 10px rgba(0,0,0,0.7);
+      color: #fff6ec; font-family: var(--font-calligraphy); font-size: 1.45rem;
+      display: flex; align-items: center; justify-content: center; transform: rotate(-3deg);
+    }
+    .admin-title-text h1 {
+      font-family: var(--font-display); font-size: 1.45rem; color: #fae5a3;
+      margin: 0 0 0.2rem; text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    }
+    .admin-title-text p { color: var(--text-muted); margin: 0; font-size: 0.86rem; }
+    .admin-actions { display: flex; align-items: center; gap: 0.75rem; }
+    .admin-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 0.95rem; margin-bottom: 1.5rem; }
+    .kpi-card {
+      background: linear-gradient(165deg, rgba(36, 24, 16, 0.96), rgba(20, 13, 9, 0.99));
+      border: 1px solid rgba(226, 180, 90, 0.25); border-radius: 12px;
+      padding: 1.1rem 1.15rem; display: flex; flex-direction: column; gap: 0.35rem;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.45);
+      position: relative; overflow: hidden;
+    }
+    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #b8251a, #e2b45a); }
+    .kpi-label { font-size: 0.73rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; }
+    .kpi-value { font-family: var(--font-display); font-size: 1.95rem; font-weight: 800; color: #fae5a3; line-height: 1.1; }
+    .kpi-sub { font-size: 0.75rem; color: #a89f91; }
+    .admin-tabs {
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem;
+      background: rgba(16, 11, 7, 0.85); border: 1px solid rgba(226, 180, 90, 0.32);
+      border-radius: 12px; padding: 0.38rem; margin-bottom: 1.25rem;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.45);
+    }
+    .admin-tab-btn {
+      background: transparent; border: 1px solid transparent; color: var(--text-muted);
+      font-family: var(--font-display); font-size: 0.98rem; font-weight: 700;
+      padding: 0.65rem 1.25rem; cursor: pointer; border-radius: 9px; transition: all 0.18s ease;
+    }
+    .admin-tab-btn:hover { color: #fff; background: rgba(226, 180, 90, 0.08); }
+    .admin-tab-btn.active {
+      color: #fae5a3;
+      background: linear-gradient(135deg, rgba(188, 42, 30, 0.28), rgba(226, 180, 90, 0.2));
+      border-color: rgba(226, 180, 90, 0.65);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+    }
+    .admin-panel {
+      background: linear-gradient(160deg, rgba(35, 23, 15, 0.97), rgba(18, 12, 8, 0.99));
+      border: 1px solid rgba(226, 180, 90, 0.3); border-radius: 14px; padding: 1.35rem;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    }
     .table-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
     .table-search-input {
-      background: #18110c; border: 1px solid rgba(255,255,255,0.15); color: #fff;
-      padding: 0.45rem 0.8rem; border-radius: 6px; font-size: 0.85rem; width: 280px; max-width: 100%;
+      background: #140d08; border: 1px solid rgba(226, 180, 90, 0.28); color: #fff;
+      padding: 0.48rem 0.85rem; border-radius: 8px; font-size: 0.85rem; width: 280px; max-width: 100%;
     }
     .table-responsive { width: 100%; overflow-x: auto; }
-    .admin-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; text-align: left; }
-    .admin-table th { background: #18110c; color: #f1c40f; padding: 0.7rem 0.6rem; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; }
-    .admin-table td { padding: 0.65rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #e0d8cc; vertical-align: middle; }
-    .admin-table tr:hover td { background: rgba(255,255,255,0.03); }
-    .player-badge-cell { display: inline-flex; align-items: center; gap: 0.4rem; }
-    .user-avatar-mini { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(212,175,55,0.4); }
-    .badge-win { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
-    .badge-win-sente { background: #2c3e50; color: #fff; border: 1px solid #34495e; }
-    .badge-win-gote { background: #555; color: #fff; border: 1px solid #777; }
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; text-align: left; }
+    .admin-table th {
+      background: #150e09; color: #fae5a3; font-family: var(--font-display);
+      padding: 0.75rem 0.65rem; font-weight: 700; border-bottom: 1px solid rgba(226, 180, 90, 0.25); white-space: nowrap;
+    }
+    .admin-table td { padding: 0.68rem 0.65rem; border-bottom: 1px solid rgba(255,255,255,0.06); color: #efe6d8; vertical-align: middle; }
+    .admin-table tr:hover td { background: rgba(226, 180, 90, 0.05); }
+    .player-badge-cell { display: inline-flex; align-items: center; gap: 0.45rem; }
+    .user-avatar-mini { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(212,175,55,0.5); }
+    .badge-win { display: inline-block; padding: 0.18rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+    .badge-win-sente { background: rgba(188, 42, 30, 0.28); color: #ffd4cc; border: 1px solid rgba(188, 42, 30, 0.55); }
+    .badge-win-gote { background: rgba(226, 180, 90, 0.18); color: #fae5a3; border: 1px solid rgba(226, 180, 90, 0.45); }
     .btn-subfilter {
       background: transparent; border: none; color: #a89f91; font-size: 0.78rem; font-weight: 600;
-      padding: 0.25rem 0.6rem; border-radius: 6px; cursor: pointer; transition: all 0.15s;
+      padding: 0.28rem 0.68rem; border-radius: 6px; cursor: pointer; transition: all 0.15s;
     }
-    .btn-subfilter.active { background: rgba(212,175,55,0.2); color: #f1c40f; }
+    .btn-subfilter.active { background: rgba(188, 42, 30, 0.35); color: #fae5a3; border: 1px solid rgba(226, 180, 90, 0.4); }
     .auth-gate-box {
-      text-align: center; padding: 3rem 1.5rem; background: #231913; border: 1px solid rgba(212,175,55,0.25);
-      border-radius: 12px; max-width: 480px; margin: 4rem auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      text-align: center; padding: 3rem 1.5rem;
+      background: linear-gradient(160deg, rgba(35, 23, 15, 0.98), rgba(18, 12, 8, 0.99));
+      border: 1px solid rgba(226, 180, 90, 0.38);
+      border-radius: 14px; max-width: 480px; margin: 4rem auto; box-shadow: 0 16px 40px rgba(0,0,0,0.65);
     }
-    .auth-gate-box h2 { color: #f1c40f; margin-bottom: 0.75rem; }
-    .auth-gate-box p { color: #a89f91; font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.5rem; }
+    .auth-gate-box h2 { font-family: var(--font-display); color: #fae5a3; margin-bottom: 0.75rem; }
+    .auth-gate-box p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.5rem; }
   </style>
 </head>
 <body>
@@ -1974,7 +2024,7 @@ def page_admin():
       </div>
     </div>
     <div class="room-bar">
-      <a href="/" class="btn" style="text-decoration:none;">← Volver al Dojo</a>
+      <a href="/" class="btn btn-primary" style="text-decoration:none;">← Volver al Dojo</a>
     </div>
   </header>
 
@@ -1988,8 +2038,11 @@ def page_admin():
     <div id="admin-content" style="display:none;">
       <div class="admin-header-card">
         <div class="admin-title-wrap">
-          <h1>🛡️ Panel de Administración y Métricas</h1>
-          <p>Supervisión en tiempo real de partidas disputadas, jugadores registrados y balance de juego.</p>
+          <div class="admin-hanko-seal" title="Hanko: Supervisión del Dojo" aria-hidden="true">監</div>
+          <div class="admin-title-text">
+            <h1>Panel de Administración y Métricas (奉行所)</h1>
+            <p>Supervisión en tiempo real de partidas disputadas, jugadores registrados y balance de juego del Dojo.</p>
+          </div>
         </div>
         <div class="admin-actions">
           <div id="admin-user-pill" style="display:inline-flex; align-items:center; gap:0.5rem; background:rgba(212,175,55,0.15); padding:0.3rem 0.75rem; border-radius:999px; font-size:0.82rem; border:1px solid rgba(212,175,55,0.3);">
