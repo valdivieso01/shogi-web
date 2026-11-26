@@ -1,25 +1,32 @@
 :root {
-  --bg-page: #181411;
-  --bg-surface: #231d18;
-  --bg-card: #2c241d;
-  --border-subtle: #44372c;
-  --text-main: #f5ede2;
-  --text-muted: #c2b29f;
-  --accent-gold: #dfb15b;
-  --accent-gold-hover: #ecc271;
-  --accent-crimson: #c93b2b;
+  --bg-page: #110c09;
+  --bg-surface: #1b130e;
+  --bg-card: #221811;
+  --border-subtle: rgba(212, 169, 92, 0.22);
+  --border-gold: rgba(223, 177, 91, 0.45);
+  --text-main: #f6efe4;
+  --text-muted: #c6b59f;
+  --accent-gold: #e2b45a;
+  --accent-gold-hover: #f2c872;
+  --accent-crimson: #bc2a1e;
   --accent-jade: #2e8b67;
+  --radius-lg: 14px;
 
-  /* Shōgiban & Koma (Madera Kaya tradicional) */
-  --wood-board-light: #e2b874;
-  --wood-board-dark: #cfa058;
-  --wood-frame: #5c3e23;
-  --grid-line: #3b2816;
-  --koma-top: #f7deb0;
-  --koma-bottom: #dfb573;
-  --koma-edge: #9b6f34;
-  --koma-ink: #1e130a;
-  --koma-promoted: #b82318;
+  /* Tipografías con identidad japonesa (frontend-design) */
+  --font-display: "Shippori Mincho", "Yu Mincho", Georgia, serif;
+  --font-calligraphy: "Yuji Syuku", "Shippori Mincho", "Yu Mincho", serif;
+  --font-sans: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  /* Shōgiban & Koma (Madera Kaya tradicional & Laca Urushi) */
+  --wood-board-light: #e5bb75;
+  --wood-board-dark: #cc9b4e;
+  --wood-frame: #3a2210;
+  --grid-line: #29190c;
+  --koma-top: #fbf0d9;
+  --koma-bottom: #deb471;
+  --koma-edge: #835721;
+  --koma-ink: #170e06;
+  --koma-promoted: #b81f16;
 }
 
 *,
@@ -37,10 +44,34 @@ body {
   min-block-size: 100dvb;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  background: radial-gradient(circle at 50% 15%, #2b221b 0%, var(--bg-page) 80%);
+  background-color: var(--bg-page);
+  background-image:
+    radial-gradient(circle at 50% 8%, rgba(188, 42, 30, 0.12) 0%, transparent 48%),
+    radial-gradient(circle at 50% 22%, rgba(226, 180, 90, 0.11) 0%, transparent 65%),
+    repeating-linear-gradient(
+      45deg,
+      rgba(226, 180, 90, 0.018) 0px,
+      rgba(226, 180, 90, 0.018) 1px,
+      transparent 1px,
+      transparent 28px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(226, 180, 90, 0.018) 0px,
+      rgba(226, 180, 90, 0.018) 1px,
+      transparent 1px,
+      transparent 28px
+    );
   color: var(--text-main);
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-  line-height: 1.45;
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: 0.015em;
 }
 
 /* Header */
@@ -925,17 +956,28 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-/* Shōgiban (Tablero 9x9) */
+/* Shōgiban (Tablero 9x9 en Madera Kaya tallada) */
 .shogiban-frame {
   inline-size: 100%;
   max-inline-size: 720px;
-  background: linear-gradient(145deg, var(--wood-board-light), var(--wood-board-dark));
-  border: 6px solid var(--wood-frame);
+  background-color: var(--wood-board-light);
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(120, 72, 24, 0.045) 0px,
+      rgba(120, 72, 24, 0.045) 2px,
+      transparent 2px,
+      transparent 9px
+    ),
+    linear-gradient(155deg, #ebc580 0%, #d8a75b 52%, #c59143 100%);
+  border: 8px solid var(--wood-frame);
+  outline: 1px solid rgba(226, 180, 90, 0.42);
   border-radius: 10px;
-  padding: 0.65rem 0.75rem 0.85rem 0.85rem;
+  padding: 0.7rem 0.8rem 0.9rem 0.9rem;
   box-shadow:
-    0 18px 40px rgba(0, 0, 0, 0.65),
-    inset 0 0 24px rgba(92, 62, 35, 0.35);
+    0 24px 52px rgba(0, 0, 0, 0.78),
+    0 4px 0 #231409,
+    inset 0 0 28px rgba(74, 44, 18, 0.38);
 }
 
 .col-coords {
@@ -1061,7 +1103,7 @@ body {
   box-shadow: none;
 }
 
-/* Ficha Pentagonal Tradicional Grande y Legible (Koma) */
+/* Ficha Pentagonal Tradicional Tallada en 3D (Koma) */
 .koma-tile {
   inline-size: 95%;
   block-size: 95%;
@@ -1071,15 +1113,17 @@ body {
   align-items: safe center;
   justify-content: center;
   gap: 2px;
-  background: linear-gradient(180deg, #faebd0 0%, #e4bc7a 100%);
-  color: #1a1007;
-  /* Pentágono ancho que apunta hacia arriba */
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.24) 0%, transparent 48%, rgba(120, 74, 22, 0.14) 100%),
+    linear-gradient(180deg, #fdf3de 0%, #edd09b 58%, #dfb46e 100%);
+  color: var(--koma-ink);
   clip-path: polygon(50% 2%, 97% 17%, 93% 97%, 7% 97%, 3% 17%);
-  filter: drop-shadow(0 2px 3px rgba(25, 15, 5, 0.6));
+  filter: drop-shadow(0 3px 3px rgba(18, 10, 3, 0.68));
   padding-block-start: 0.35rem;
   padding-block-end: 0.15rem;
   padding-inline: 0.15rem;
   position: relative;
+  transition: transform 0.12s ease;
 }
 
 .koma-tile::before {
@@ -1087,13 +1131,16 @@ body {
   position: absolute;
   inset: 0;
   clip-path: inherit;
-  border-block-end: 3px solid #8c5f26;
+  border-block-end: 4px solid #7d521e;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.7);
   pointer-events: none;
 }
 
 /* Pieza que apunta hacia abajo (Rival): giramos la silueta pentagonal pero NO el texto en español */
 .koma-tile.points-down {
-  background: linear-gradient(180deg, #e0b775 0%, #f5dfba 100%);
+  background:
+    linear-gradient(90deg, rgba(120, 74, 22, 0.14) 0%, transparent 52%, rgba(255, 255, 255, 0.24) 100%),
+    linear-gradient(180deg, #dfb46e 0%, #edd09b 42%, #fdf3de 100%);
   clip-path: polygon(7% 3%, 93% 3%, 97% 83%, 50% 98%, 3% 83%);
   padding-block-start: 0.15rem;
   padding-block-end: 0.4rem;
@@ -1101,16 +1148,18 @@ body {
 
 .koma-tile.points-down::before {
   border-block-end: none;
-  border-block-start: 3px solid #754d1b;
+  border-block-start: 4px solid #724918;
 }
 
 .koma-tile.promoted {
-  background: linear-gradient(180deg, #fff1d0 0%, #eab965 100%);
-  color: #b91c1c;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.28) 0%, transparent 50%, rgba(184, 31, 22, 0.08) 100%),
+    linear-gradient(180deg, #fff5dc 0%, #f1c676 100%);
+  color: var(--koma-promoted);
 }
 
 .koma-tile.promoted::before {
-  border-color: #b91c1c;
+  border-color: #9e1b13;
 }
 
 .koma-top-row {
@@ -1122,10 +1171,11 @@ body {
 }
 
 .koma-kanji {
-  font-family: "Yu Mincho", "Hiragino Mincho ProN", "MS PMincho", "Noto Serif JP", serif;
+  font-family: var(--font-calligraphy);
   font-weight: 900;
-  font-size: clamp(1rem, 1.8vw, 1.32rem);
+  font-size: clamp(1.06rem, 1.9vw, 1.4rem);
   line-height: 1;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
 .koma-code {
@@ -2082,17 +2132,21 @@ dialog::backdrop {
 }
 
 /* ==========================================
-   MODO HISTORIA: CRÓNICAS DEL SENGOKU
+   MODO HISTORIA: CRÓNICAS DEL SENGOKU (ARTE UKIYO-E & SELLOS HANKO)
    ========================================== */
 .story-campaign-card {
-  background: linear-gradient(145deg, rgba(44, 29, 19, 0.96), rgba(26, 17, 11, 0.98));
-  border: 1px solid rgba(212, 175, 55, 0.38);
+  background:
+    radial-gradient(circle at 90% 10%, rgba(188, 42, 30, 0.14) 0%, transparent 45%),
+    linear-gradient(155deg, rgba(35, 23, 15, 0.98), rgba(18, 12, 8, 0.99));
+  border: 1px solid rgba(226, 180, 90, 0.42);
   border-radius: var(--radius-lg);
-  padding: 1.35rem 1.5rem;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 215, 120, 0.12);
+  padding: 1.5rem 1.6rem;
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(255, 215, 130, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 1.15rem;
+  gap: 1.3rem;
   position: relative;
   overflow: hidden;
 }
@@ -2103,8 +2157,8 @@ dialog::backdrop {
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #b8860b, #f1c40f, #e67e22, #b8860b);
+  height: 4px;
+  background: linear-gradient(90deg, #8b1e14, #d4af37, #f1c40f, #d4af37, #8b1e14);
 }
 
 .story-campaign-header {
@@ -2119,7 +2173,7 @@ dialog::backdrop {
   max-width: 780px;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .story-tag {
@@ -2129,25 +2183,28 @@ dialog::backdrop {
   font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #1a0f07;
-  background: linear-gradient(135deg, #f1c40f, #d4af37);
-  padding: 0.2rem 0.65rem;
-  border-radius: 999px;
-  box-shadow: 0 2px 8px rgba(241, 196, 15, 0.25);
+  letter-spacing: 0.08em;
+  color: #fff5ea;
+  background: linear-gradient(135deg, #b8251a, #8f1810);
+  border: 1px solid rgba(255, 195, 160, 0.4);
+  padding: 0.22rem 0.7rem;
+  border-radius: 4px;
+  box-shadow: 0 3px 10px rgba(184, 37, 26, 0.35);
 }
 
 .story-campaign-title-wrap h2 {
-  font-size: 1.3rem;
-  color: #f9e498;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: #fae5a3;
   margin: 0;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
 }
 
 .story-campaign-title-wrap p {
-  font-size: 0.86rem;
+  font-size: 0.88rem;
   color: var(--text-muted);
   margin: 0;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .story-campaign-controls {
@@ -2159,93 +2216,156 @@ dialog::backdrop {
 
 .story-progress-pill {
   background: rgba(212, 175, 55, 0.14);
-  border: 1px solid rgba(212, 175, 55, 0.35);
-  color: #f1c40f;
-  font-size: 0.8rem;
+  border: 1px solid rgba(212, 175, 55, 0.42);
+  color: #f3ca62;
+  font-size: 0.82rem;
   font-weight: 700;
-  padding: 0.32rem 0.75rem;
-  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  border-radius: 6px;
 }
 
 .story-chapters-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+  gap: 1.05rem;
 }
 
 .story-boss-card {
-  background: rgba(20, 14, 9, 0.82);
-  border: 1px solid rgba(212, 175, 55, 0.22);
-  border-radius: 10px;
-  padding: 1rem;
+  background: linear-gradient(180deg, #1d140e 0%, #130d09 100%);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 12px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 0.75rem;
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
   position: relative;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.52);
 }
 
 .story-boss-card:not(.is-locked):hover {
-  transform: translateY(-3px);
-  border-color: rgba(241, 196, 15, 0.65);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  transform: translateY(-5px);
+  border-color: #f1c40f;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.72), 0 0 18px rgba(226, 180, 90, 0.2);
 }
 
 .story-boss-card.is-completed {
-  border-color: rgba(46, 204, 113, 0.45);
-  background: linear-gradient(160deg, rgba(22, 38, 26, 0.45), rgba(20, 14, 9, 0.9));
+  border-color: rgba(57, 217, 138, 0.5);
 }
 
 .story-boss-card.is-next {
   border-color: #f1c40f;
-  box-shadow: 0 0 16px rgba(241, 196, 15, 0.18);
+  box-shadow: 0 0 22px rgba(241, 196, 15, 0.22);
 }
 
 .story-boss-card.is-locked {
-  opacity: 0.58;
-  filter: grayscale(0.35);
+  opacity: 0.62;
+  filter: saturate(0.45);
 }
 
-.story-boss-top {
+/* Cabecera Ilustrada Ukiyo-e de cada Personaje */
+.story-boss-art-banner {
+  position: relative;
+  inline-size: 100%;
+  block-size: 168px;
+  overflow: hidden;
+  background: #140e0a;
+  border-block-end: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.story-boss-portrait {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  object-position: center 18%;
+  transition: transform 0.4s ease;
+  display: block;
+}
+
+.story-boss-card:not(.is-locked):hover .story-boss-portrait {
+  transform: scale(1.06);
+}
+
+.story-boss-art-banner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 10, 7, 0.45) 0%,
+    transparent 38%,
+    rgba(19, 13, 9, 0.96) 100%
+  );
+  pointer-events: none;
+}
+
+.story-boss-art-overlay {
+  position: absolute;
+  top: 0.55rem;
+  left: 0.6rem;
+  right: 0.6rem;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.35rem;
+  z-index: 2;
 }
 
+/* Sello Imperial Hanko (朱印) en Rojo Bermellón */
 .story-boss-mon {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #3d2817, #1a1008);
-  border: 2px solid #d4af37;
-  color: #f1c40f;
-  font-size: 1.35rem;
-  font-weight: 800;
+  position: absolute;
+  bottom: 0.55rem;
+  right: 0.65rem;
+  z-index: 3;
+  width: 38px;
+  height: 38px;
+  border-radius: 5px;
+  background: linear-gradient(145deg, #c6281c, #96180f);
+  border: 1.5px solid rgba(255, 232, 214, 0.82);
+  box-shadow:
+    inset 0 0 0 2px #96180f,
+    0 4px 10px rgba(0, 0, 0, 0.75);
+  color: #fff6ec;
+  font-family: var(--font-calligraphy);
+  font-size: 1.25rem;
+  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
+  transform: rotate(-3deg);
+}
+
+.story-boss-body {
+  padding: 0.85rem 1rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
 }
 
 .story-boss-meta {
   display: flex;
-  flex-direction: column;
-  gap: 0.12rem;
-  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem;
+  flex-wrap: wrap;
 }
 
 .story-boss-chap {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #d4af37;
+  color: #f7DF9C;
+  background: rgba(18, 12, 8, 0.82);
+  border: 1px solid rgba(212, 175, 55, 0.38);
+  padding: 0.14rem 0.45rem;
+  border-radius: 4px;
   font-weight: 700;
+  backdrop-filter: blur(4px);
 }
 
 .story-boss-name {
-  font-size: 0.98rem;
+  font-family: var(--font-display);
+  font-size: 1.12rem;
   font-weight: 800;
   color: #fff;
   margin: 0;
@@ -2253,8 +2373,9 @@ dialog::backdrop {
 }
 
 .story-boss-kanji {
-  font-size: 0.76rem;
-  color: var(--text-muted);
+  font-family: var(--font-calligraphy);
+  font-size: 0.84rem;
+  color: var(--accent-gold);
 }
 
 .story-boss-role {
@@ -2266,23 +2387,26 @@ dialog::backdrop {
 .story-boss-desc {
   font-size: 0.77rem;
   color: #cfc6b8;
-  line-height: 1.38;
-  margin: 0;
+  line-height: 1.42;
+  margin: 0.15rem 0 0;
 }
 
 .story-boss-quote {
-  font-size: 0.74rem;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
   font-style: italic;
-  color: #a89f91;
-  border-left: 2px solid rgba(212, 175, 55, 0.45);
-  padding-left: 0.5rem;
+  color: #d8cbb8;
+  border-left: 2px solid #bc2a1e;
+  padding-left: 0.55rem;
   margin: 0;
+  line-height: 1.38;
 }
 
 .story-boss-footer {
+  padding: 0.55rem 1rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.55rem;
   margin-top: auto;
 }
 
@@ -2290,69 +2414,103 @@ dialog::backdrop {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
 }
 
 .story-stars {
   color: #f1c40f;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
+}
+
+.story-elo-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #c6b59f;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
 }
 
 .story-status-tag {
   font-weight: 700;
-  padding: 0.1rem 0.45rem;
+  padding: 0.14rem 0.48rem;
   border-radius: 4px;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
+  backdrop-filter: blur(4px);
 }
 
 .story-status-tag.done {
-  background: rgba(46, 204, 113, 0.18);
-  color: #2ecc71;
-  border: 1px solid rgba(46, 204, 113, 0.35);
+  background: rgba(22, 101, 52, 0.88);
+  color: #86efac;
+  border: 1px solid rgba(74, 222, 128, 0.5);
 }
 
 .story-status-tag.ready {
-  background: rgba(241, 196, 15, 0.18);
-  color: #f1c40f;
+  background: rgba(180, 83, 9, 0.88);
+  color: #fde68a;
+  border: 1px solid rgba(251, 191, 36, 0.5);
 }
 
 .story-status-tag.locked {
-  background: rgba(255, 255, 255, 0.07);
-  color: #999;
+  background: rgba(20, 14, 10, 0.85);
+  color: #aaa;
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 /* HUD DEL RIVAL EN LA ARENA DE JUEGO */
 .story-hud-panel {
   width: 100%;
-  max-width: 640px;
-  background: linear-gradient(135deg, rgba(38, 25, 16, 0.96), rgba(22, 15, 10, 0.98));
-  border: 1px solid rgba(212, 175, 55, 0.45);
-  border-radius: 10px;
-  padding: 0.8rem 1rem;
-  margin-bottom: 0.55rem;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  max-width: 720px;
+  background:
+    radial-gradient(circle at 0% 50%, rgba(188, 42, 30, 0.16), transparent 55%),
+    linear-gradient(135deg, rgba(34, 22, 14, 0.98), rgba(18, 12, 8, 0.99));
+  border: 1px solid rgba(226, 180, 90, 0.48);
+  border-radius: 12px;
+  padding: 0.85rem 1.1rem;
+  margin-bottom: 0.6rem;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
 }
 
 .story-hud-main {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 1rem;
+}
+
+.story-hud-avatar-wrap {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  min-width: 68px;
+}
+
+.story-hud-portrait {
+  width: 68px;
+  height: 68px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 2px solid #d4af37;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65);
+  display: block;
 }
 
 .story-hud-crest {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #442c18, #1a1008);
-  border: 2px solid #f1c40f;
-  color: #f1c40f;
-  font-size: 1.5rem;
-  font-weight: 800;
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  background: linear-gradient(145deg, #c6281c, #96180f);
+  border: 1px solid rgba(255, 235, 220, 0.85);
+  color: #fff;
+  font-family: var(--font-calligraphy);
+  font-size: 0.88rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  transform: rotate(-4deg);
 }
 
 .story-hud-info {
@@ -2360,7 +2518,7 @@ dialog::backdrop {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.18rem;
+  gap: 0.2rem;
 }
 
 .story-hud-topline {
@@ -2372,12 +2530,13 @@ dialog::backdrop {
 }
 
 .story-hud-chapter-badge {
-  background: rgba(212, 175, 55, 0.22);
-  color: #f1c40f;
+  background: linear-gradient(135deg, #b8251a, #8f1810);
+  color: #fff5ea;
   font-weight: 800;
-  padding: 0.1rem 0.45rem;
+  padding: 0.12rem 0.5rem;
   border-radius: 4px;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .story-hud-stars {
@@ -2390,17 +2549,19 @@ dialog::backdrop {
 }
 
 .story-hud-name {
-  font-size: 1.02rem;
+  font-family: var(--font-display);
+  font-size: 1.08rem;
   color: #fff;
   margin: 0;
 }
 
 .story-hud-quote {
-  font-size: 0.82rem;
+  font-family: var(--font-display);
+  font-size: 0.84rem;
   font-style: italic;
-  color: #f9e498;
+  color: #fae5a3;
   margin: 0.1rem 0 0;
-  line-height: 1.35;
+  line-height: 1.38;
 }
 
 .story-hud-actions {

@@ -2590,6 +2590,7 @@
       name: "Ashigaru Tōkichi",
       kanji: "足軽 藤吉",
       mon: "歩",
+      portrait: "/static/portraits/ashigaru.jpg",
       stars: 1,
       elo: 800,
       era: { es: "1554 · Provincia de Owari", en: "1554 · Owari Province" },
@@ -2635,6 +2636,7 @@
       name: "Hattori Hanzō",
       kanji: "服部 半蔵",
       mon: "忍",
+      portrait: "/static/portraits/hanzo.jpg",
       stars: 2,
       elo: 1100,
       era: { es: "1572 · Provincia de Mikawa", en: "1572 · Mikawa Province" },
@@ -2680,6 +2682,7 @@
       name: "Takeda Shingen",
       kanji: "武田 信玄",
       mon: "風",
+      portrait: "/static/portraits/shingen.jpg",
       stars: 3,
       elo: 1350,
       era: { es: "1561 · Batalla de Kawanakajima", en: "1561 · Battle of Kawanakajima" },
@@ -2725,6 +2728,7 @@
       name: "Oda Nobunaga",
       kanji: "織田 信長",
       mon: "天",
+      portrait: "/static/portraits/nobunaga.jpg",
       stars: 4,
       elo: 1600,
       era: { es: "1575 · Castillo de Azuchi", en: "1575 · Azuchi Castle" },
@@ -2770,6 +2774,7 @@
       name: "Ōhashi Sōkei",
       kanji: "大橋 宗桂",
       mon: "王",
+      portrait: "/static/portraits/sokei.jpg",
       stars: 5,
       elo: 1850,
       era: { es: "1612 · Castillo de Edo", en: "1612 · Edo Castle" },
@@ -2891,23 +2896,27 @@
 
       return `
         <article class="${cardClasses}">
-          <div>
-            <div class="story-boss-top">
-              <div class="story-boss-mon" aria-hidden="true">${b.mon}</div>
-              <div class="story-boss-meta">
-                <span class="story-boss-chap">${isEn ? "Chapter" : "Capítulo"} ${b.chapter} · ${escapeHTML(b.era[lang])}</span>
-                <h3 class="story-boss-name">${escapeHTML(b.name)}</h3>
-                <span class="story-boss-kanji" lang="ja">${b.kanji}</span>
-              </div>
+          <div class="story-boss-art-banner">
+            <img src="${b.portrait}" alt="${escapeHTML(b.name)}" class="story-boss-portrait" width="360" height="360" loading="lazy">
+            <div class="story-boss-art-overlay">
+              <span class="story-boss-chap">${isEn ? "Ch." : "Cap."} ${b.chapter} · ${escapeHTML(b.era[lang])}</span>
+              ${statusBadge}
             </div>
-            <div class="story-boss-role" style="margin-top:0.55rem;">${escapeHTML(b.role[lang])}</div>
-            <p class="story-boss-desc" style="margin-top:0.35rem;">${escapeHTML(b.desc[lang])}</p>
+            <div class="story-boss-mon" title="Hanko: ${b.kanji}" aria-hidden="true">${b.mon}</div>
+          </div>
+          <div class="story-boss-body">
+            <div class="story-boss-meta">
+              <h3 class="story-boss-name">${escapeHTML(b.name)}</h3>
+              <span class="story-boss-kanji" lang="ja">${b.kanji}</span>
+            </div>
+            <div class="story-boss-role">${escapeHTML(b.role[lang])}</div>
+            <p class="story-boss-desc">${escapeHTML(b.desc[lang])}</p>
           </div>
           <div class="story-boss-footer">
             <p class="story-boss-quote">${escapeHTML(b.quotes.intro[lang])}</p>
             <div class="story-boss-badges">
-              <span class="story-stars" title="ELO ~${b.elo}">${starsStr} <small style="color:#a89f91;">(${b.elo})</small></span>
-              ${statusBadge}
+              <span class="story-stars" title="ELO ~${b.elo}">${starsStr}</span>
+              <span class="story-elo-tag">ELO ~${b.elo}</span>
             </div>
             <button type="button" class="btn ${isNext ? "btn-primary" : "btn-accent"} btn-block btn-story-play" data-chapter="${b.chapter}" ${!isUnlocked ? "disabled" : ""}>
               ${btnLabel}
@@ -2957,6 +2966,11 @@
     const isEn = window.i18n && window.i18n.getLanguage() === "en";
     const lang = isEn ? "en" : "es";
 
+    const portraitEl = document.getElementById("story-hud-portrait");
+    if (portraitEl && boss.portrait) {
+      portraitEl.src = boss.portrait;
+      portraitEl.alt = boss.name;
+    }
     document.getElementById("story-hud-mon").textContent = boss.mon;
     document.getElementById("story-hud-chapter-badge").textContent = isEn
       ? `Chapter ${boss.chapter} of 5`

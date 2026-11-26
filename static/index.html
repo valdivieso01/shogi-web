@@ -34,7 +34,10 @@
   <meta name="twitter:description" content="Partidas online en tiempo real, Lobby de Matchmaking, modo contra IA y Academia interactiva de 12 lecciones en español.">
   <meta name="twitter:image" content="https://www.dojoshogi.online/static/og-image.png">
 
-  <link rel="stylesheet" href="/static/styles.css?v=18">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Shippori+Mincho:wght@600;700;800&family=Yuji+Syuku&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css?v=19">
 
   <!-- Datos Estructurados JSON-LD (Schema.org WebSite + WebApplication + FAQPage) para indexado en Google -->
   <script type="application/ld+json">
@@ -474,7 +477,10 @@
         <!-- Panel del Rival Histórico en Modo Historia -->
         <article class="story-hud-panel" id="story-hud-panel" aria-live="polite" hidden>
           <div class="story-hud-main">
-            <div class="story-hud-crest" id="story-hud-mon" aria-hidden="true">風</div>
+            <div class="story-hud-avatar-wrap">
+              <img src="/static/portraits/ashigaru.jpg" alt="" class="story-hud-portrait" id="story-hud-portrait" width="68" height="68">
+              <div class="story-hud-crest" id="story-hud-mon" aria-hidden="true">歩</div>
+            </div>
             <div class="story-hud-info">
               <div class="story-hud-topline">
                 <span class="story-hud-chapter-badge" id="story-hud-chapter-badge">Capítulo 1 de 5</span>
@@ -778,6 +784,6 @@
   </dialog>
 
   <script src="/static/i18n.js?v=4"></script>
-  <script src="/static/app.js?v=23" defer></script>
+  <script src="/static/app.js?v=24" defer></script>
 </body>
 </html>
