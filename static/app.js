@@ -983,6 +983,9 @@
   ];
 
   function getNickname() {
+    if (state.authUser && state.authUser.name) {
+      return state.authUser.name;
+    }
     const val = (lobbyNicknameInput.value || "").trim();
     if (val) {
       state.nickname = val;
@@ -2375,6 +2378,8 @@
 
   function updateAuthUI(user) {
     const btnAdmin = document.getElementById("btn-admin-topbar");
+    const heroProfileCard = document.getElementById("hero-profile-card");
+    const lobbyHero = document.getElementById("lobby-hero");
     if (user) {
       if (btnGoogleLogin) btnGoogleLogin.hidden = true;
       if (userProfileWidget) {
@@ -2384,10 +2389,14 @@
         userRatingTop.textContent = `${user.rating || 1200} pts`;
       }
       if (btnAdmin) btnAdmin.hidden = !user.is_admin;
+      if (heroProfileCard) heroProfileCard.hidden = true;
+      if (lobbyHero) lobbyHero.classList.add("is-authenticated");
     } else {
       if (btnGoogleLogin) btnGoogleLogin.hidden = false;
       if (userProfileWidget) userProfileWidget.hidden = true;
       if (btnAdmin) btnAdmin.hidden = true;
+      if (heroProfileCard) heroProfileCard.hidden = false;
+      if (lobbyHero) lobbyHero.classList.remove("is-authenticated");
     }
     renderStoryCampaign();
   }

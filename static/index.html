@@ -37,7 +37,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Shippori+Mincho:wght@600;700;800&family=Yuji+Syuku&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/styles.css?v=21">
+  <link rel="stylesheet" href="/static/styles.css?v=22">
 
   <!-- Datos Estructurados JSON-LD (Schema.org WebSite + WebApplication + FAQPage) para indexado en Google -->
   <script type="application/ld+json">
@@ -209,15 +209,11 @@
   <main>
     <!-- VISTA 1: LOBBY PRINCIPAL DE MATCHMAKING Y SALAS -->
     <section class="lobby-page" id="lobby-view" aria-label="Lobby principal de emparejamiento y salas">
-      <div class="lobby-hero">
-        <div class="hero-profile">
+      <div class="lobby-hero" id="lobby-hero">
+        <div class="hero-profile" id="hero-profile-card">
           <label class="field-label" for="lobby-nickname" data-i18n="player_name_label">Tu nombre de jugador en el Dojo</label>
           <div class="profile-input-row">
             <input type="text" id="lobby-nickname" class="text-input" placeholder="Ej. Kenshin" data-i18n-placeholder="player_name_placeholder" maxlength="24" autocomplete="nickname">
-            <span class="online-pill">
-              <span class="status-dot online" aria-hidden="true"></span>
-              <span id="online-count-label">1 en el lobby</span>
-            </span>
           </div>
         </div>
 
@@ -229,6 +225,10 @@
             </p>
           </div>
           <div class="matchmake-actions">
+            <span class="online-pill">
+              <span class="status-dot online" aria-hidden="true"></span>
+              <span id="online-count-label">1 en el lobby</span>
+            </span>
             <span class="queue-badge" id="queue-count-badge">0 buscando rival</span>
             <button type="button" class="btn btn-primary btn-lg" id="btn-quick-match" data-i18n="btn_quick_match">
               ⚔️ Buscar Rival Ahora
@@ -810,6 +810,6 @@
   </dialog>
 
   <script src="/static/i18n.js?v=6"></script>
-  <script src="/static/app.js?v=27" defer></script>
+  <script src="/static/app.js?v=28" defer></script>
 </body>
 </html>
