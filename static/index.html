@@ -37,7 +37,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Shippori+Mincho:wght@600;700;800&family=Yuji+Syuku&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/styles.css?v=23">
+  <link rel="stylesheet" href="/static/styles.css?v=24">
 
   <!-- Datos Estructurados JSON-LD (Schema.org WebSite + WebApplication + FAQPage) para indexado en Google -->
   <script type="application/ld+json">
@@ -207,116 +207,57 @@
   </header>
 
   <main>
-    <!-- VISTA 1: LOBBY PRINCIPAL DE MATCHMAKING Y SALAS -->
+    <!-- VISTA 1: STUDIO DE ESTRATEGIA (SIDEBAR COMMAND DOCK + LIENZO CENTRAL) -->
     <section class="lobby-page" id="lobby-view" aria-label="Lobby principal de emparejamiento y salas">
-      <div class="lobby-hero" id="lobby-hero">
-        <div class="hero-profile" id="hero-profile-card">
-          <label class="field-label" for="lobby-nickname" data-i18n="player_name_label">Tu nombre de jugador en el Dojo</label>
-          <div class="profile-input-row">
-            <input type="text" id="lobby-nickname" class="text-input" placeholder="Ej. Kenshin" data-i18n-placeholder="player_name_placeholder" maxlength="24" autocomplete="nickname">
-          </div>
-        </div>
-
-        <div class="matchmake-card" id="matchmake-card">
-          <div class="matchmake-info">
-            <h2 data-i18n-html="quick_match_title">Emparejamiento Rápido (<span lang="ja">対局</span>)</h2>
-            <p id="matchmake-status-text" data-i18n="quick_match_desc">
-              Busca a otro jugador en cola y comienza una partida automáticamente con asignación de bandos.
-            </p>
-          </div>
-          <div class="matchmake-actions">
+      <div class="studio-shell">
+        <!-- COLUMNA IZQUIERDA FIJA: COMMAND DOCK DEL DOJO -->
+        <aside class="studio-sidebar" aria-label="Consola de comando del Dojo">
+          <!-- Estado de Red en Vivo -->
+          <div class="dock-telemetry">
             <span class="online-pill">
               <span class="status-dot online" aria-hidden="true"></span>
               <span id="online-count-label">1 en el lobby</span>
             </span>
             <span class="queue-badge" id="queue-count-badge">0 buscando rival</span>
-            <button type="button" class="btn btn-primary btn-lg" id="btn-quick-match" data-i18n="btn_quick_match">
-              ☗ Buscar Rival Ahora
-            </button>
-            <button type="button" class="btn btn-danger btn-lg" id="btn-cancel-match" data-i18n="btn_cancel_match" hidden>
-              Cancelar búsqueda
-            </button>
-            <button type="button" class="btn btn-accent btn-lg" id="btn-jump-story" data-i18n="btn_jump_story">
-              Modo Historia
-            </button>
-            <button type="button" class="btn btn-lg" id="btn-play-ai-quick" data-i18n="btn_play_ai">
-              Práctica vs IA
-            </button>
           </div>
-        </div>
-      </div>
 
-      <!-- 1. PRIMERO Y SIEMPRE VISIBLE: ACADEMIA DE SHŌGI (CURSO INTERACTIVO DE 12 LECCIONES) -->
-      <section class="tutorial-banner-card" aria-labelledby="tutorial-lobby-heading">
-        <div class="tutorial-banner-info">
-          <div class="tutorial-top-row">
-            <div>
-              <span class="tutorial-tag" data-i18n="academy_badge">Academia Interactiva Completa · 12 Lecciones con Diagramas</span>
-              <h2 id="tutorial-lobby-heading" data-i18n="academy_heading">Curso Paso a Paso: Cómo Mueve Cada Pieza, Reglas y Tácticas</h2>
+          <!-- Perfil de Invitado (Se oculta automáticamente al iniciar sesión con Google) -->
+          <div class="hero-profile" id="hero-profile-card">
+            <label class="field-label" for="lobby-nickname" data-i18n="player_name_label">Tu nombre de jugador en el Dojo</label>
+            <div class="profile-input-row">
+              <input type="text" id="lobby-nickname" class="text-input" placeholder="Ej. Kenshin" data-i18n-placeholder="player_name_placeholder" maxlength="24" autocomplete="nickname">
             </div>
-            <button type="button" class="btn btn-primary" id="btn-start-tutorial-hero" data-i18n="btn_start_course">
-              Empezar Curso desde Lección 1 →
-            </button>
           </div>
-          <p data-i18n="academy_desc" class="tutorial-compact-desc">
-            Aprende desde cero con diagramas visuales de movimiento (brújula de casillas) y práctica en el tablero:
-            <strong>Rey</strong>, <strong>General de Oro</strong>, <strong>General de Plata</strong>, <strong>Peón y Tokin</strong>, <strong>Lancero</strong>, <strong>Caballo</strong>, <strong>Alfil y Caballo Dragón</strong>, <strong>Torre y Dragón</strong>, <strong>Reincorporaciones (Drops)</strong>, prohibiciones (<strong>Nifu y Uchifuzume</strong>), <strong>Defensa de Jaque</strong> y <strong>Jaque Mate</strong>.
-          </p>
-          <div class="tutorial-chapters-pills" id="tutorial-chapters-pills">
-            <button type="button" class="chapter-pill" data-step="0">01 · El Rey (王 · K)</button>
-            <button type="button" class="chapter-pill" data-step="1">02 · General de Oro (金 · G)</button>
-            <button type="button" class="chapter-pill" data-step="2">03 · General de Plata (銀 · S)</button>
-            <button type="button" class="chapter-pill" data-step="3">04 · Peón y Tokin (歩 → と)</button>
-            <button type="button" class="chapter-pill" data-step="4">05 · El Lancero (香 · L)</button>
-            <button type="button" class="chapter-pill" data-step="5">06 · El Caballo (桂 · N)</button>
-            <button type="button" class="chapter-pill" data-step="6">07 · Alfil y C.Dragón (角 → 馬)</button>
-            <button type="button" class="chapter-pill" data-step="7">08 · Torre y Dragón (飛 → 龍)</button>
-            <button type="button" class="chapter-pill" data-step="8">09 · Reincorporar (Drops)</button>
-            <button type="button" class="chapter-pill" data-step="9">10 · Reglas Nifu y Uchifuzume</button>
-            <button type="button" class="chapter-pill" data-step="10">11 · Defender un Jaque</button>
-            <button type="button" class="chapter-pill" data-step="11">12 · Jaque Mate (Atama-kin)</button>
-          </div>
-        </div>
-      </section>
 
-      <!-- 2. BARRA DE PESTAÑAS DEL DOJO (TODO A LA VISTA EN LA MISMA PANTALLA SIN HACER SCROLL) -->
-      <nav class="lobby-hub-tabs" role="tablist" aria-label="Secciones principales del Dojo">
-        <button type="button" class="lobby-hub-tab active" role="tab" aria-selected="true" data-hub-tab="online" id="hub-tab-btn-online">
-          <span class="hub-tab-icon" aria-hidden="true">対</span>
-          <span data-i18n="tab_online_lobby">Salas Online y Partidas en Vivo</span>
-        </button>
-        <button type="button" class="lobby-hub-tab" role="tab" aria-selected="false" data-hub-tab="story" id="hub-tab-btn-story">
-          <span class="hub-tab-icon" aria-hidden="true">伝</span>
-          <span data-i18n="tab_story_mode">Modo Historia: Crónicas del Sengoku</span>
-          <span class="hub-tab-badge" id="hub-story-badge">0/5</span>
-        </button>
-        <button type="button" class="lobby-hub-tab" role="tab" aria-selected="false" data-hub-tab="ranking" id="hub-tab-btn-ranking">
-          <span class="hub-tab-icon" aria-hidden="true">位</span>
-          <span data-i18n="tab_hall_of_fame">Salón de la Fama y Últimas Partidas</span>
-        </button>
-      </nav>
-
-      <!-- PANEL A: SALAS ONLINE, CÓDIGO PRIVADO, ESPECTADOR Y JUGADORES EN LÍNEA -->
-      <div class="lobby-columns" id="hub-panel-online" role="tabpanel">
-        <!-- Salas Públicas Esperando Jugador -->
-        <section class="lobby-panel lobby-panel-featured" aria-labelledby="open-rooms-heading">
-          <div class="panel-header">
-            <div class="panel-title-with-seal">
-              <span class="hanko-mini" aria-hidden="true">戦</span>
-              <h2 id="open-rooms-heading" data-i18n="open_rooms_heading">Salas Abiertas Esperando Rival</h2>
+          <!-- Consola de Emparejamiento y Juego Rápido -->
+          <div class="matchmake-card" id="matchmake-card">
+            <div class="matchmake-info">
+              <span class="dock-kicker">KACHI-IRO COMMAND · 対局</span>
+              <h2 data-i18n-html="quick_match_title">Emparejamiento Rápido (<span lang="ja">対局</span>)</h2>
+              <p id="matchmake-status-text" data-i18n="quick_match_desc">
+                Busca a otro jugador en cola y comienza una partida automáticamente con asignación de bandos.
+              </p>
             </div>
-            <button type="button" class="btn btn-primary" id="btn-create-public-quick" data-i18n="btn_new_public_room">
-              + Nueva Sala Pública
-            </button>
+            <div class="matchmake-actions">
+              <button type="button" class="btn btn-primary btn-lg btn-dock-main" id="btn-quick-match" data-i18n="btn_quick_match">
+                ☗ Buscar Rival Ahora
+              </button>
+              <button type="button" class="btn btn-danger btn-lg btn-dock-main" id="btn-cancel-match" data-i18n="btn_cancel_match" hidden>
+                Cancelar búsqueda
+              </button>
+              <div class="dock-secondary-grid">
+                <button type="button" class="btn btn-accent" id="btn-jump-story" data-i18n="btn_jump_story">
+                  Modo Historia
+                </button>
+                <button type="button" class="btn" id="btn-play-ai-quick" data-i18n="btn_play_ai">
+                  Práctica vs IA
+                </button>
+              </div>
+            </div>
           </div>
-          <div class="rooms-list" id="open-rooms-list" aria-live="polite">
-            <p class="empty-state" data-i18n="no_open_rooms">No hay salas esperando jugador. ¡Crea una o usa Buscar Rival!</p>
-          </div>
-        </section>
 
-        <!-- Partidas en Curso + Unirse por Código + Jugadores en Línea -->
-        <div class="lobby-side-stack">
-          <section class="lobby-panel" aria-labelledby="join-by-code-heading">
+          <!-- Unión Directa con Código Privado -->
+          <section class="dock-section" aria-labelledby="join-by-code-heading">
             <h2 id="join-by-code-heading" data-i18n="join_code_heading">Unirse con Código Privado</h2>
             <div class="code-join-row">
               <input type="text" id="direct-code-input" class="text-input code-input" placeholder="CÓDIGO (6 LETRAS)" data-i18n-placeholder="join_code_placeholder" maxlength="6" aria-label="Código de sala de 6 caracteres">
@@ -325,85 +266,190 @@
             <p class="dialog-error" id="direct-join-error" role="alert" hidden></p>
           </section>
 
-          <section class="lobby-panel" aria-labelledby="live-rooms-heading">
-            <div class="panel-header">
-              <h2 id="live-rooms-heading" data-i18n="live_rooms_heading">Partidas en Vivo (Espectador)</h2>
-            </div>
-            <div class="rooms-list compact-list" id="live-rooms-list" aria-live="polite">
-              <p class="empty-state" data-i18n="no_live_rooms">No hay partidas en curso en este momento.</p>
-            </div>
-          </section>
-
-          <section class="lobby-panel" aria-labelledby="online-players-heading">
+          <!-- Jugadores Conectados en el Lobby -->
+          <section class="dock-section dock-players-section" aria-labelledby="online-players-heading">
             <div class="panel-header">
               <h2 id="online-players-heading" data-i18n="online_players_heading">Jugadores en el Lobby</h2>
             </div>
             <ul class="players-online-list" id="online-players-list" aria-live="polite"></ul>
           </section>
+        </aside>
+
+        <!-- LIENZO PRINCIPAL DERECHO -->
+        <div class="studio-workspace">
+          <!-- 1. PRIMERO Y SIEMPRE VISIBLE: ACADEMIA DE SHŌGI CON FICHAS KOMA PENTAGONALES 3D -->
+          <section class="tutorial-banner-card" aria-labelledby="tutorial-lobby-heading">
+            <div class="tutorial-banner-info">
+              <div class="tutorial-top-row">
+                <div>
+                  <span class="tutorial-tag" data-i18n="academy_badge">Academia Interactiva Completa · 12 Lecciones con Diagramas</span>
+                  <h2 id="tutorial-lobby-heading" data-i18n="academy_heading">Curso Paso a Paso: Cómo Mueve Cada Pieza, Reglas y Tácticas</h2>
+                </div>
+                <button type="button" class="btn btn-primary" id="btn-start-tutorial-hero" data-i18n="btn_start_course">
+                  Empezar Curso desde Lección 1 →
+                </button>
+              </div>
+              <p data-i18n="academy_desc" class="tutorial-compact-desc">
+                Haz clic en cualquier ficha <strong>Koma</strong> para abrir su lección interactiva en el tablero con brújula visual de movimiento:
+              </p>
+              <div class="tutorial-chapters-pills" id="tutorial-chapters-pills">
+                <button type="button" class="chapter-pill" data-step="0">
+                  <span class="mini-koma" aria-hidden="true">王</span>
+                  <span class="chapter-meta"><small>01 · K</small><strong>El Rey</strong></span>
+                </button>
+                <button type="button" class="chapter-pill" data-step="1">
+                  <span class="mini-koma" aria-hidden="true">金</span>
+                  <span class="chapter-meta"><small>02 · G</small><strong>General Oro</strong></span>
+                </button>
+                <button type="button" class="chapter-pill" data-step="2">
+                  <span class="mini-koma" aria-hidden="true">銀</span>
+                  <span class="chapter-meta"><small>03 · S</small><strong>General Plata</strong></span>
+                </button>
+                <button type="button" class="chapter-pill" data-step="3">
+                  <span class="mini-koma is-promoted" aria-hidden="true">と</span>
+                  <span class="chapter-meta"><small>04 · P → +P</small><strong>Peón y Tokin</strong></span>
+                </button>
+                <button type="button" class="chapter-pill" data-step="4">
+                  <span class="mini-koma" aria-hidden="true">香</span>
+                  <span class="chapter-meta"><small>05 · L</small><strong>El Lancero</strong></span>
+                </button>
+                <button type="button" class="chapter-pill" data-step="5">
+                  <span class="mini-koma" aria-hidden="true">桂</span>
+                  <span class="chapter-meta"><small>06 · N</small><strong>El Caballo</strong></span>
+                </button>
+                <button type="button" class="chapter-pill" data-step="6">
+                  <span class="mini-koma is-promoted" aria-hidden="true">馬</span>
+                  <span class="chapter-meta"><small>07 · B → +B</small><strong>Alfil y Dragón</strong></span>
+                </button>
+                <button type="button" class="chapter-pill" data-step="7">
+                  <span class="mini-koma is-promoted" aria-hidden="true">龍</span>
+                  <span class="chapter-meta"><small>08 · R → +R</small><strong>Torre y Dragón</strong></span>
+                </button>
+                <button type="button" class="chapter-pill" data-step="8">
+                  <span class="mini-koma" aria-hidden="true">打</span>
+                  <span class="chapter-meta"><small>09 · Drops</small><strong>Reincorporar</strong></span>
+                </button>
+                <button type="button" class="chapter-pill" data-step="9">
+                  <span class="mini-koma" aria-hidden="true">禁</span>
+                  <span class="chapter-meta"><small>10 · Reglas</small><strong>Nifu / Uchifuzume</strong></span>
+                </button>
+                <button type="button" class="chapter-pill" data-step="10">
+                  <span class="mini-koma" aria-hidden="true">防</span>
+                  <span class="chapter-meta"><small>11 · Ōte</small><strong>Defender Jaque</strong></span>
+                </button>
+                <button type="button" class="chapter-pill" data-step="11">
+                  <span class="mini-koma is-promoted" aria-hidden="true">詰</span>
+                  <span class="chapter-meta"><small>12 · Tsumi</small><strong>Jaque Mate</strong></span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <!-- 2. BARRA DE VISTAS DEL ESTUDIO (SALAS ONLINE | CRÓNICAS DEL SENGOKU | SALÓN DE LA FAMA) -->
+          <nav class="lobby-hub-tabs" role="tablist" aria-label="Secciones principales del Dojo">
+            <button type="button" class="lobby-hub-tab active" role="tab" aria-selected="true" data-hub-tab="online" id="hub-tab-btn-online">
+              <span class="hub-tab-icon" aria-hidden="true">対</span>
+              <span data-i18n="tab_online_lobby">Salas Online y Partidas en Vivo</span>
+            </button>
+            <button type="button" class="lobby-hub-tab" role="tab" aria-selected="false" data-hub-tab="story" id="hub-tab-btn-story">
+              <span class="hub-tab-icon" aria-hidden="true">伝</span>
+              <span data-i18n="tab_story_mode">Modo Historia: Crónicas del Sengoku</span>
+              <span class="hub-tab-badge" id="hub-story-badge">0/5</span>
+            </button>
+            <button type="button" class="lobby-hub-tab" role="tab" aria-selected="false" data-hub-tab="ranking" id="hub-tab-btn-ranking">
+              <span class="hub-tab-icon" aria-hidden="true">位</span>
+              <span data-i18n="tab_hall_of_fame">Salón de la Fama y Últimas Partidas</span>
+            </button>
+          </nav>
+
+          <!-- PANEL A: SALAS ABIERTAS Y PARTIDAS EN CURSO -->
+          <div class="lobby-columns" id="hub-panel-online" role="tabpanel">
+            <section class="lobby-panel lobby-panel-featured" aria-labelledby="open-rooms-heading">
+              <div class="panel-header">
+                <div class="panel-title-with-seal">
+                  <span class="hanko-mini" aria-hidden="true">戦</span>
+                  <h2 id="open-rooms-heading" data-i18n="open_rooms_heading">Salas Abiertas Esperando Rival</h2>
+                </div>
+                <button type="button" class="btn btn-primary" id="btn-create-public-quick" data-i18n="btn_new_public_room">
+                  + Nueva Sala Pública
+                </button>
+              </div>
+              <div class="rooms-list" id="open-rooms-list" aria-live="polite">
+                <p class="empty-state" data-i18n="no_open_rooms">No hay salas esperando jugador. ¡Crea una o usa Buscar Rival!</p>
+              </div>
+            </section>
+
+            <section class="lobby-panel" aria-labelledby="live-rooms-heading">
+              <div class="panel-header">
+                <h2 id="live-rooms-heading" data-i18n="live_rooms_heading">Partidas en Vivo (Espectador)</h2>
+              </div>
+              <div class="rooms-list" id="live-rooms-list" aria-live="polite">
+                <p class="empty-state" data-i18n="no_live_rooms">No hay partidas en curso en este momento.</p>
+              </div>
+            </section>
+          </div>
+
+          <!-- PANEL B: MODO HISTORIA (1 JUGADOR): CRÓNICAS DEL SENGOKU -->
+          <section class="story-campaign-card" id="story-campaign-section" role="tabpanel" aria-labelledby="story-campaign-heading" hidden>
+            <div class="story-campaign-header">
+              <div class="story-campaign-title-wrap">
+                <span class="story-tag" data-i18n="story_badge">Modo Historia · Campaña de 5 Capítulos (1 Jugador)</span>
+                <h2 id="story-campaign-heading" data-i18n="story_heading">Crónicas del Sengoku: El Camino del Shōgun (戦国将棋伝)</h2>
+                <p data-i18n="story_desc">
+                  Enfrenta en orden cronológico y táctico a 5 figuras legendarias del Japón feudal: desde un soldado de infantería <em>Ashigaru</em> hasta el mítico <em>Meijin</em> <strong>Ōhashi Sōkei</strong>.
+                </p>
+              </div>
+              <div class="story-campaign-controls">
+                <span class="story-progress-pill" id="story-progress-pill">0 / 5 Derrotados</span>
+                <button type="button" class="btn btn-sm" id="btn-story-unlock-all" data-i18n="btn_story_unlock_all" hidden>Modo Libre</button>
+              </div>
+            </div>
+            <div class="story-chapters-grid" id="story-chapters-grid" aria-live="polite"></div>
+          </section>
+
+          <!-- PANEL C: RANKING COMPETITIVO Y SALÓN DE LA FAMA ONLINE -->
+          <section class="community-stats-section" id="hub-panel-ranking" role="tabpanel" aria-labelledby="leaderboard-heading" hidden>
+            <div class="stats-grid">
+              <div class="stats-card leaderboard-card">
+                <div class="panel-header">
+                  <h2 id="leaderboard-heading" data-i18n="leaderboard_title">Salón de la Fama (Top Jugadores)</h2>
+                  <span class="badge-tag" data-i18n="leaderboard_tag">Competitivo</span>
+                </div>
+                <div class="leaderboard-table-wrap">
+                  <table class="leaderboard-table">
+                    <thead>
+                      <tr>
+                        <th scope="col" data-i18n="rank_col">#</th>
+                        <th scope="col" data-i18n="player_col">Jugador</th>
+                        <th scope="col" class="text-right" data-i18n="rating_col">Rating</th>
+                        <th scope="col" class="text-right" data-i18n="victories_col">V / D</th>
+                        <th scope="col" class="text-right" data-i18n="winrate_col">Efectividad</th>
+                      </tr>
+                    </thead>
+                    <tbody id="leaderboard-tbody">
+                      <tr>
+                        <td colspan="5" class="empty-state" data-i18n="leaderboard_empty">
+                          Aún no hay partidas puntuadas. ¡Inicia sesión con Google, juega una partida y lidera el Salón de la Fama!
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="stats-card recent-matches-card">
+                <div class="panel-header">
+                  <h2 data-i18n="recent_matches_title">Últimas Partidas Disputadas</h2>
+                  <span class="badge-tag" data-i18n="matches_tag">En Vivo</span>
+                </div>
+                <div class="recent-matches-list" id="recent-matches-list">
+                  <p class="empty-state" data-i18n="recent_matches_empty">No hay partidas registradas recientemente.</p>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
-
-      <!-- PANEL B: MODO HISTORIA (1 JUGADOR): CRÓNICAS DEL SENGOKU -->
-      <section class="story-campaign-card" id="story-campaign-section" role="tabpanel" aria-labelledby="story-campaign-heading" hidden>
-        <div class="story-campaign-header">
-          <div class="story-campaign-title-wrap">
-            <span class="story-tag" data-i18n="story_badge">Modo Historia · Campaña de 5 Capítulos (1 Jugador)</span>
-            <h2 id="story-campaign-heading" data-i18n="story_heading">Crónicas del Sengoku: El Camino del Shōgun (戦国将棋伝)</h2>
-            <p data-i18n="story_desc">
-              Enfrenta en orden cronológico y táctico a 5 figuras legendarias del Japón feudal: desde un soldado de infantería <em>Ashigaru</em> hasta el mítico <em>Meijin</em> <strong>Ōhashi Sōkei</strong>.
-            </p>
-          </div>
-          <div class="story-campaign-controls">
-            <span class="story-progress-pill" id="story-progress-pill">0 / 5 Derrotados</span>
-            <button type="button" class="btn btn-sm" id="btn-story-unlock-all" data-i18n="btn_story_unlock_all" hidden>Modo Libre</button>
-          </div>
-        </div>
-        <div class="story-chapters-grid" id="story-chapters-grid" aria-live="polite"></div>
-      </section>
-
-      <!-- PANEL C: RANKING COMPETITIVO Y SALÓN DE LA FAMA ONLINE -->
-      <section class="community-stats-section" id="hub-panel-ranking" role="tabpanel" aria-labelledby="leaderboard-heading" hidden>
-        <div class="stats-grid">
-          <!-- Salón de la Fama -->
-          <div class="stats-card leaderboard-card">
-            <div class="panel-header">
-              <h2 id="leaderboard-heading" data-i18n="leaderboard_title">Salón de la Fama (Top Jugadores)</h2>
-              <span class="badge-tag" data-i18n="leaderboard_tag">Competitivo</span>
-            </div>
-            <div class="leaderboard-table-wrap">
-              <table class="leaderboard-table">
-                <thead>
-                  <tr>
-                    <th scope="col" data-i18n="rank_col">#</th>
-                    <th scope="col" data-i18n="player_col">Jugador</th>
-                    <th scope="col" class="text-right" data-i18n="rating_col">Rating</th>
-                    <th scope="col" class="text-right" data-i18n="victories_col">V / D</th>
-                    <th scope="col" class="text-right" data-i18n="winrate_col">Efectividad</th>
-                  </tr>
-                </thead>
-                <tbody id="leaderboard-tbody">
-                  <tr>
-                    <td colspan="5" class="empty-state" data-i18n="leaderboard_empty">
-                      Aún no hay partidas puntuadas. ¡Inicia sesión con Google, juega una partida y lidera el Salón de la Fama!
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Historial de Partidas Recientes -->
-          <div class="stats-card recent-matches-card">
-            <div class="panel-header">
-              <h2 data-i18n="recent_matches_title">Últimas Partidas Disputadas</h2>
-              <span class="badge-tag" data-i18n="matches_tag">En Vivo</span>
-            </div>
-            <div class="recent-matches-list" id="recent-matches-list">
-              <p class="empty-state" data-i18n="recent_matches_empty">No hay partidas registradas recientemente.</p>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <!-- Sección Editorial / SEO para Indexado en Google y Google AdSense -->
       <section class="seo-editorial-section" aria-labelledby="seo-guide-heading">
@@ -809,7 +855,7 @@
     </div>
   </dialog>
 
-  <script src="/static/i18n.js?v=7"></script>
+  <script src="/static/i18n.js?v=8"></script>
   <script src="/static/app.js?v=30" defer></script>
 </body>
 </html>

@@ -1380,7 +1380,7 @@ def render_legal_page(
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Shippori+Mincho:wght@600;700;800&family=Yuji+Syuku&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/styles.css?v=22">
+  <link rel="stylesheet" href="/static/styles.css?v=24">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4665232577336299" crossorigin="anonymous"></script>
   <script>
     window.va = window.va || function () {{ (window.vaq = window.vaq || []).push(arguments); }};
@@ -1924,7 +1924,7 @@ def page_admin():
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Shippori+Mincho:wght@600;700;800&family=Yuji+Syuku&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/styles.css?v=23">
+  <link rel="stylesheet" href="/static/styles.css?v=24">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     .admin-container { max-width: 1280px; margin: 1.25rem auto 3.5rem; padding: 0 1.25rem; }
@@ -1962,7 +1962,7 @@ def page_admin():
     }
     .kpi-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; }
     .kpi-value { font-family: var(--font-display); font-size: 1.75rem; font-weight: 800; color: var(--accent-gold); line-height: 1.1; }
-    .kpi-sub { font-size: 0.74rem; color: #a89f91; }
+    .kpi-sub { font-size: 0.74rem; color: var(--text-muted); }
     .admin-tabs {
       display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
       background: var(--bg-surface); border: 1px solid var(--border-subtle);
@@ -1987,14 +1987,14 @@ def page_admin():
     }
     .table-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
     .table-search-input {
-      background: #140d08; border: 1px solid rgba(226, 180, 90, 0.28); color: #fff;
-      padding: 0.48rem 0.85rem; border-radius: 8px; font-size: 0.85rem; width: 280px; max-width: 100%;
+      background: #080d18; border: 1px solid var(--border-subtle); color: #fff;
+      padding: 0.48rem 0.85rem; border-radius: 2px; font-size: 0.85rem; width: 280px; max-width: 100%;
     }
     .table-responsive { width: 100%; overflow-x: auto; }
     .admin-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; text-align: left; }
     .admin-table th {
-      background: #150e09; color: #fae5a3; font-family: var(--font-display);
-      padding: 0.75rem 0.65rem; font-weight: 700; border-bottom: 1px solid rgba(226, 180, 90, 0.25); white-space: nowrap;
+      background: var(--bg-surface); color: var(--accent-gold); font-family: var(--font-display);
+      padding: 0.75rem 0.65rem; font-weight: 700; border-bottom: 1px solid var(--border-subtle); white-space: nowrap;
     }
     .admin-table td { padding: 0.68rem 0.65rem; border-bottom: 1px solid rgba(255,255,255,0.06); color: #efe6d8; vertical-align: middle; }
     .admin-table tr:hover td { background: rgba(226, 180, 90, 0.05); }

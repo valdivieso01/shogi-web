@@ -479,32 +479,32 @@
 
   const TUTORIAL_PILLS = {
     es: [
-      "1. El Rey (王 · K)",
-      "2. General de Oro (金 · G)",
-      "3. General de Plata (銀 · S)",
-      "4. Peón y Tokin (歩 → と)",
-      "5. El Lancero (香 · L)",
-      "6. El Caballo (桂 · N)",
-      "7. Alfil y C.Dragón (角 → 馬)",
-      "8. Torre y Dragón (飛 → 龍)",
-      "9. Reincorporar (Drops)",
-      "10. Reglas Nifu y Uchifuzume",
-      "11. Defender un Jaque",
-      "12. Jaque Mate (Atama-kin)",
+      "El Rey",
+      "General Oro",
+      "General Plata",
+      "Peón y Tokin",
+      "El Lancero",
+      "El Caballo",
+      "Alfil y Dragón",
+      "Torre y Dragón",
+      "Reincorporar",
+      "Nifu / Uchifuzume",
+      "Defender Jaque",
+      "Jaque Mate",
     ],
     en: [
-      "1. The King (王 · K)",
-      "2. Gold General (金 · G)",
-      "3. Silver General (銀 · S)",
-      "4. Pawn & Tokin (歩 → と)",
-      "5. The Lance (香 · L)",
-      "6. The Knight (桂 · N)",
-      "7. Bishop & Horse (角 → 馬)",
-      "8. Rook & Dragon (飛 → 龍)",
-      "9. Drops (Reincorporation)",
-      "10. Nifu & Uchifuzume Rules",
-      "11. Defending Against Check",
-      "12. Checkmate (Atama-kin)",
+      "The King",
+      "Gold General",
+      "Silver General",
+      "Pawn & Tokin",
+      "The Lance",
+      "The Knight",
+      "Bishop & Horse",
+      "Rook & Dragon",
+      "Drops (Uchi)",
+      "Nifu / Uchifuzume",
+      "Defend Check",
+      "Checkmate",
     ],
   };
 
@@ -697,11 +697,17 @@
       langLabel.textContent = currentLang.toUpperCase();
     }
 
-    // Update Academy Chapter pills in lobby
+    // Update Academy Chapter pills in lobby (preserving 3D Koma icon inside each button)
     const pillButtons = document.querySelectorAll("#tutorial-chapters-pills .chapter-pill");
     const pillsList = TUTORIAL_PILLS[currentLang] || TUTORIAL_PILLS.es;
     pillButtons.forEach((btn, idx) => {
-      if (pillsList[idx]) btn.textContent = pillsList[idx];
+      if (!pillsList[idx]) return;
+      const strongEl = btn.querySelector(".chapter-meta strong");
+      if (strongEl) {
+        strongEl.textContent = pillsList[idx];
+      } else {
+        btn.textContent = pillsList[idx];
+      }
     });
 
     // Update footer navigation links according to current language

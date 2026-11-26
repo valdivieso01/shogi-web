@@ -1,16 +1,18 @@
 :root {
-  /* Dirección 1: Shōgiban Editorial & Sumi-e (shogi-art-direction) */
-  --bg-page: #11100e;
-  --bg-surface: #171512;
-  --bg-card: #1c1916;
-  --border-subtle: rgba(235, 224, 206, 0.13);
-  --border-gold: rgba(217, 173, 101, 0.42);
-  --text-main: #f4efe6;
-  --text-muted: #b3a796;
-  --accent-gold: #d9ad65;
-  --accent-gold-hover: #e7c07d;
-  --accent-crimson: #b8291d;
-  --accent-jade: #358f6c;
+  /* Opción B: Indigo Kifu & Tatami Studio (Kachi-iro Samurái + Estudio de Estrategia) */
+  --bg-page: #0a101d;
+  --bg-surface: #0f1829;
+  --bg-card: #152136;
+  --bg-dock: #0c1424;
+  --border-subtle: rgba(148, 179, 224, 0.16);
+  --border-gold: rgba(232, 185, 106, 0.48);
+  --text-main: #f1f5f9;
+  --text-muted: #94a7c4;
+  --accent-gold: #e8b96a;
+  --accent-gold-hover: #f5cd84;
+  --accent-crimson: #d93829;
+  --accent-jade: #2b9e76;
+  --accent-indigo: #243b61;
   --radius-sm: 2px;
   --radius-md: 4px;
   --radius-lg: 4px;
@@ -20,16 +22,16 @@
   --font-calligraphy: "Yuji Syuku", "Shippori Mincho", "Yu Mincho", serif;
   --font-sans: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
 
-  /* Shōgiban & Koma (Madera Kaya tradicional & Tinta Sumi) */
-  --wood-board-light: #e5bb75;
-  --wood-board-dark: #cc9b4e;
-  --wood-frame: #362010;
-  --grid-line: #26170b;
-  --koma-top: #fbf0d9;
+  /* Shōgiban & Koma (Madera Kaya tradicional resaltando sobre Índigo Kachi-iro) */
+  --wood-board-light: #e8c07a;
+  --wood-board-dark: #cf9e50;
+  --wood-frame: #2c190b;
+  --grid-line: #231409;
+  --koma-top: #fdf3de;
   --koma-bottom: #deb471;
   --koma-edge: #835721;
   --koma-ink: #170e06;
-  --koma-promoted: #b81f16;
+  --koma-promoted: #c41e14;
 }
 
 *,
@@ -49,8 +51,9 @@ body {
   grid-template-rows: auto 1fr auto;
   background-color: var(--bg-page);
   background-image:
-    radial-gradient(circle at 50% 0%, rgba(217, 173, 101, 0.06) 0%, transparent 55%),
-    linear-gradient(180deg, #13110f 0%, #100e0c 100%);
+    radial-gradient(circle at 15% 15%, rgba(43, 158, 118, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 85% 10%, rgba(56, 103, 180, 0.14) 0%, transparent 50%),
+    linear-gradient(180deg, #0b1220 0%, #070c16 100%);
   color: var(--text-main);
   font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
@@ -69,17 +72,18 @@ h3 {
   letter-spacing: 0.015em;
 }
 
-/* Header Editorial */
+/* Header Indigo Studio */
 .topbar {
   display: flex;
   flex-wrap: wrap;
   align-items: safe center;
   justify-content: space-between;
   gap: 1rem;
-  padding-block: 0.7rem;
+  padding-block: 0.65rem;
   padding-inline: 1.5rem;
-  background: #141210;
+  background: rgba(9, 15, 28, 0.96);
   border-block-end: 1px solid var(--border-subtle);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
 }
 
 .brand {
@@ -251,49 +255,156 @@ h3 {
 }
 
 /* ==========================================
-   VISTA 1: LOBBY DE EMPAREJAMIENTO Y SALAS
+   VISTA 1: STUDIO DE ESTRATEGIA (COMMAND DOCK LATERAL + LIENZO CENTRAL)
    ========================================== */
 .lobby-page {
-  max-inline-size: 1280px;
+  max-inline-size: 1460px;
+  inline-size: 100%;
   margin-inline: auto;
-  padding-block: 1.1rem 1.75rem;
+  padding-block: 1.25rem 2rem;
   padding-inline: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
-.lobby-hero {
+.studio-shell {
   display: grid;
-  grid-template-columns: minmax(240px, 290px) 1fr;
-  gap: 1rem;
-  align-items: stretch;
+  grid-template-columns: 330px minmax(0, 1fr);
+  gap: 1.35rem;
+  align-items: start;
 }
 
-.lobby-hero.is-authenticated {
-  grid-template-columns: 1fr;
-}
-
-.hero-profile,
-.matchmake-card,
-.lobby-panel {
-  background: var(--bg-card);
+.studio-sidebar {
+  background: var(--bg-dock);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 1.15rem 1.25rem;
+  border-block-start: 3px solid var(--accent-gold);
+  padding: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.05rem;
+  position: sticky;
+  top: 1rem;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.dock-telemetry {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.dock-telemetry .online-pill,
+.dock-telemetry .queue-badge {
+  justify-content: center;
+  text-align: center;
+  font-size: 0.76rem;
+  padding-block: 0.38rem;
+}
+
+.dock-kicker {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  margin-block-end: 0.25rem;
+}
+
+.hero-profile {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  padding: 0.85rem 0.95rem;
 }
 
 .matchmake-card {
   display: flex;
-  flex-wrap: wrap;
-  align-items: safe center;
-  justify-content: space-between;
-  gap: 1.25rem;
+  flex-direction: column;
+  gap: 0.95rem;
   background:
-    linear-gradient(90deg, rgba(217, 173, 101, 0.05) 0%, transparent 45%),
-    var(--bg-card);
-  border-color: rgba(217, 173, 101, 0.32);
-  border-inline-start: 3px solid var(--accent-gold);
+    radial-gradient(circle at 100% 0%, rgba(232, 185, 106, 0.12), transparent 60%),
+    linear-gradient(180deg, #16243b 0%, #101b2d 100%);
+  border: 1px solid rgba(232, 185, 106, 0.35);
+  padding: 1.1rem;
+}
+
+.matchmake-card.searching {
+  border-color: #39d98a;
+  box-shadow: inset 0 0 0 1px #39d98a;
+}
+
+.matchmake-info h2 {
+  margin: 0 0 0.3rem 0;
+  font-size: 1.18rem;
+  color: var(--text-main);
+}
+
+.matchmake-info h2 span {
+  color: var(--accent-gold);
+  font-weight: 500;
+}
+
+.matchmake-info p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.matchmake-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  width: 100%;
+}
+
+.btn-dock-main {
+  width: 100%;
+  padding-block: 0.75rem;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  box-shadow: 0 6px 18px rgba(232, 185, 106, 0.22);
+}
+
+.dock-secondary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.dock-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  padding: 0.95rem;
+}
+
+.dock-section h2 {
+  margin: 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.dock-players-section .panel-header {
+  margin-block-end: 0.65rem;
+  padding-block-end: 0.45rem;
+}
+
+.studio-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  min-inline-size: 0;
+}
+
+.lobby-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  padding: 1.15rem 1.25rem;
 }
 
 .lobby-panel-featured {
@@ -312,8 +423,8 @@ h3 {
   height: 24px;
   min-width: 24px;
   border-radius: 2px;
-  background: #a52016;
-  border: 1px solid rgba(255, 232, 214, 0.75);
+  background: var(--accent-crimson);
+  border: 1px solid rgba(255, 232, 214, 0.8);
   color: #fff6ec;
   font-family: var(--font-calligraphy);
   font-size: 0.85rem;
@@ -333,66 +444,27 @@ h3 {
   margin-block-end: 0;
 }
 
-.matchmake-card.searching {
-  border-color: #39d98a;
-  border-inline-start-color: #39d98a;
-}
-
-.matchmake-info {
-  flex: 1 1 300px;
-}
-
-.matchmake-info h2 {
-  margin: 0 0 0.25rem 0;
-  font-size: 1.22rem;
-  color: var(--text-main);
-}
-
-.matchmake-info h2 span {
-  color: var(--accent-gold);
-  font-weight: 500;
-}
-
-.matchmake-info p {
-  margin: 0;
-  font-size: 0.86rem;
-  color: var(--text-muted);
-}
-
-.matchmake-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: safe center;
-  gap: 0.65rem;
-}
-
 .queue-badge {
   padding-block: 0.32rem;
-  padding-inline: 0.7rem;
+  padding-inline: 0.6rem;
   border-radius: var(--radius-sm);
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
 }
 
 .btn-lg {
   padding-block: 0.62rem;
-  padding-inline: 1.2rem;
+  padding-inline: 1.15rem;
   font-size: 0.92rem;
 }
 
 .lobby-columns {
   display: grid;
-  grid-template-columns: 1.45fr 1fr;
-  gap: 1rem;
-  align-items: start;
-}
-
-.lobby-side-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 1.1rem;
+  align-items: stretch;
 }
 
 .panel-header {
@@ -416,14 +488,10 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  max-block-size: 420px;
+  max-block-size: 380px;
   overflow-y: auto;
   scrollbar-gutter: stable;
   overscroll-behavior: contain;
-}
-
-.compact-list {
-  max-block-size: 230px;
 }
 
 .room-row {
@@ -436,18 +504,18 @@ h3 {
   border-radius: var(--radius-sm);
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-inline-start: 2px solid rgba(217, 173, 101, 0.45);
+  border-inline-start: 3px solid var(--accent-gold);
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .room-row:hover {
   border-color: var(--accent-gold);
-  background: #201c18;
+  background: #1a2942;
 }
 
 .room-row-info {
   min-inline-size: 0;
-  flex: 1 1 200px;
+  flex: 1 1 180px;
 }
 
 .room-row-title {
@@ -463,8 +531,8 @@ h3 {
   font-size: 0.75rem;
   padding: 0.08rem 0.4rem;
   border-radius: var(--radius-sm);
-  background: rgba(217, 173, 101, 0.12);
-  border: 1px solid rgba(217, 173, 101, 0.25);
+  background: rgba(232, 185, 106, 0.14);
+  border: 1px solid rgba(232, 185, 106, 0.3);
   color: var(--accent-gold);
 }
 
@@ -477,17 +545,17 @@ h3 {
 }
 
 .seat-open {
-  color: #6ee7b7;
+  color: #4ade80;
   font-weight: 600;
 }
 
 .empty-state {
   margin: 0;
-  padding: 1.2rem;
+  padding: 1.35rem;
   text-align: center;
   color: var(--text-muted);
   font-size: 0.85rem;
-  background: rgba(0, 0, 0, 0.18);
+  background: rgba(8, 13, 24, 0.45);
   border: 1px dashed var(--border-subtle);
   border-radius: var(--radius-sm);
 }
@@ -495,7 +563,7 @@ h3 {
 .code-join-row {
   display: flex;
   gap: 0.5rem;
-  margin-block-start: 0.65rem;
+  margin-block-start: 0.55rem;
 }
 
 .code-join-row .text-input {
@@ -510,17 +578,19 @@ h3 {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
+  max-block-size: 150px;
+  overflow-y: auto;
 }
 
 .player-chip {
   display: inline-flex;
   align-items: safe center;
   gap: 0.4rem;
-  padding: 0.25rem 0.6rem;
+  padding: 0.22rem 0.55rem;
   border-radius: var(--radius-sm);
-  background: var(--bg-surface);
+  background: var(--bg-card);
   border: 1px solid var(--border-subtle);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
 }
 
 .player-chip.searching {
@@ -528,16 +598,17 @@ h3 {
   color: var(--accent-gold);
 }
 
-/* 1. ÍNDICE EDITORIAL DE ACADEMIA DE SHŌGI (SIEMPRE #1 ARRIBA) */
+/* 1. GALERÍA KOMA DE LA ACADEMIA DE SHŌGI (SIEMPRE #1 ARRIBA EN EL WORKSPACE) */
 .tutorial-banner-card {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  padding: 1rem 1.25rem;
-  border-radius: var(--radius-md);
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-inline-start: 3px solid var(--accent-jade);
+  padding: 1.1rem 1.3rem;
+  background:
+    radial-gradient(circle at 95% 0%, rgba(43, 158, 118, 0.16), transparent 55%),
+    linear-gradient(135deg, #132238 0%, #0e192b 100%);
+  border: 1px solid rgba(43, 158, 118, 0.45);
+  border-block-start: 3px solid var(--accent-jade);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
 }
 
 .tutorial-banner-info {
@@ -550,88 +621,137 @@ h3 {
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  margin-block-end: 0.3rem;
+  margin-block-end: 0.25rem;
 }
 
 .tutorial-tag {
   display: inline-block;
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #6ee7b7;
+  letter-spacing: 0.1em;
+  color: #5eead4;
   margin-block-end: 0.15rem;
 }
 
 .tutorial-banner-info h2 {
   margin: 0;
-  font-size: 1.12rem;
-  color: var(--text-main);
+  font-size: 1.16rem;
+  color: #fff;
 }
 
 .tutorial-banner-info p.tutorial-compact-desc {
-  margin: 0 0 0.65rem 0;
+  margin: 0 0 0.75rem 0;
   font-size: 0.82rem;
   color: var(--text-muted);
-  line-height: 1.45;
 }
 
-/* Grilla arquitectónica tipo Shōgiban para las 12 lecciones (sin píldoras flotantes) */
+/* Galería de 12 Fichas Pentagonales Koma 3D para cada Lección */
 .tutorial-chapters-pills {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
-  gap: 1px;
-  background: var(--border-subtle);
-  border: 1px solid var(--border-subtle);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.55rem;
 }
 
 .chapter-pill {
-  padding: 0.42rem 0.65rem;
-  border-radius: 0;
-  border: none;
-  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.48rem 0.6rem;
+  background: rgba(10, 16, 29, 0.72);
+  border: 1px solid var(--border-subtle);
   color: var(--text-main);
   font-family: var(--font-sans);
-  font-size: 0.76rem;
-  font-weight: 600;
   text-align: left;
   cursor: pointer;
-  transition: background-color 0.14s ease, color 0.14s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .chapter-pill:hover {
-  background: #231f1b;
-  color: var(--accent-gold);
+  transform: translateY(-2px);
+  background: #1a2942;
+  border-color: var(--accent-gold);
 }
 
-/* 2. BARRA DE NAVEGACIÓN EDITORIAL DEL DOJO (ONLINE | MODO HISTORIA | SALÓN DE LA FAMA) */
+.mini-koma {
+  flex: 0 0 2.05rem;
+  inline-size: 2.05rem;
+  block-size: 2.25rem;
+  background: linear-gradient(180deg, var(--koma-top) 0%, var(--koma-bottom) 100%);
+  color: var(--koma-ink);
+  font-family: var(--font-calligraphy);
+  font-size: 1.05rem;
+  font-weight: 900;
+  display: grid;
+  place-content: center;
+  padding-top: 0.15rem;
+  clip-path: polygon(50% 3%, 95% 19%, 89% 96%, 11% 96%, 5% 19%);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.55);
+}
+
+.mini-koma.is-promoted {
+  color: var(--koma-promoted);
+}
+
+.chapter-meta {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  line-height: 1.2;
+}
+
+.chapter-meta small {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  letter-spacing: 0.03em;
+}
+
+.chapter-meta strong {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1200px) {
+  .tutorial-chapters-pills {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .tutorial-chapters-pills {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 2. BARRA DE VISTAS DEL STUDIO (ONLINE | MODO HISTORIA | SALÓN DE LA FAMA) */
 .lobby-hub-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-block-end: 1px solid var(--border-subtle);
-  background: var(--bg-surface);
-  border-top: 1px solid var(--border-subtle);
-  border-inline: 1px solid var(--border-subtle);
+  background: var(--bg-dock);
+  border: 1px solid var(--border-subtle);
 }
 
 .lobby-hub-tab {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.55rem;
-  padding: 0.8rem 1rem;
-  border-radius: 0;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
   border: none;
   border-inline-end: 1px solid var(--border-subtle);
-  border-block-end: 2px solid transparent;
+  border-block-end: 3px solid transparent;
   background: transparent;
   color: var(--text-muted);
   font-family: var(--font-display);
-  font-size: 0.95rem;
+  font-size: 0.96rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  transition: all 0.16s ease;
   text-align: center;
 }
 
@@ -640,8 +760,8 @@ h3 {
 }
 
 .lobby-hub-tab:hover {
-  color: var(--text-main);
-  background: rgba(255, 255, 255, 0.025);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .lobby-hub-tab.active {
@@ -651,20 +771,31 @@ h3 {
 }
 
 .hub-tab-icon {
+  display: inline-grid;
+  place-content: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(232, 185, 106, 0.12);
+  border: 1px solid rgba(232, 185, 106, 0.35);
   font-family: var(--font-calligraphy);
-  font-size: 0.95rem;
+  font-size: 0.86rem;
   color: var(--accent-gold);
-  opacity: 0.85;
+}
+
+.lobby-hub-tab.active .hub-tab-icon {
+  background: var(--accent-crimson);
+  border-color: rgba(255, 230, 210, 0.8);
+  color: #fff;
 }
 
 .hub-tab-badge {
-  background: rgba(184, 41, 29, 0.25);
-  border: 1px solid rgba(184, 41, 29, 0.6);
-  color: #fca5a5;
+  background: rgba(217, 56, 41, 0.25);
+  border: 1px solid rgba(217, 56, 41, 0.65);
+  color: #fecaca;
   font-family: var(--font-sans);
   font-size: 0.7rem;
-  font-weight: 700;
-  padding: 0.08rem 0.4rem;
+  font-weight: 800;
+  padding: 0.08rem 0.42rem;
   border-radius: var(--radius-sm);
 }
 
@@ -1462,7 +1593,7 @@ h3 {
 }
 
 .btn:hover:not(:disabled) {
-  background: #25211d;
+  background: #1d2d47;
   border-color: var(--accent-gold);
 }
 
@@ -1582,7 +1713,7 @@ dialog::backdrop {
   padding: 0.52rem 0.7rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
-  background: #12100d;
+  background: #080d18;
   color: var(--text-main);
   font-size: 0.9rem;
   margin-block-end: 0.75rem;
@@ -1777,11 +1908,11 @@ dialog::backdrop {
   line-height: 1.6;
 }
 
-/* Footer Completo estilo Radar Black Mesa (AdSense & Indexado) */
+/* Footer Completo (Indigo Studio) */
 .site-footer {
   inline-size: 100%;
   border-block-start: 1px solid var(--border-subtle);
-  background: rgba(20, 16, 13, 0.95);
+  background: rgba(7, 12, 22, 0.96);
   margin-block-start: 2.5rem;
   padding-block: 2.25rem 2.75rem;
   padding-inline: 1.5rem;
@@ -2010,9 +2141,13 @@ dialog::backdrop {
 }
 
 @media (max-width: 1080px) {
-  .lobby-hero,
+  .studio-shell,
   .lobby-columns {
     grid-template-columns: 1fr;
+  }
+
+  .studio-sidebar {
+    position: static;
   }
 
   .arena {
@@ -2037,19 +2172,19 @@ dialog::backdrop {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  background: #231b14;
+  background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   color: var(--text-main);
-  padding: 0.35rem 0.65rem;
+  padding: 0.35rem 0.7rem;
   font-size: 0.8rem;
   font-weight: 600;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .btn-auth:hover {
-  background: #31251b;
+  background: #1a2942;
   border-color: var(--accent-gold);
   color: var(--accent-gold);
 }
@@ -2062,25 +2197,24 @@ dialog::backdrop {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: #231b14;
+  background: var(--bg-surface);
   border: 1px solid var(--accent-gold);
   padding: 0.2rem 0.55rem 0.2rem 0.25rem;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
 }
 
 .btn-admin-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  background: linear-gradient(135deg, #d4af37, #f39c12);
-  color: #1a0f07 !important;
+  background: var(--accent-gold);
+  color: #0a101d !important;
   font-size: 0.72rem;
   font-weight: 800;
   padding: 0.18rem 0.55rem;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   text-decoration: none !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
-  transition: transform 0.15s ease, filter 0.15s ease;
+  transition: filter 0.15s ease;
 }
 
 .btn-admin-pill:hover {
@@ -2589,10 +2723,10 @@ dialog::backdrop {
   width: 100%;
   max-width: 720px;
   background:
-    radial-gradient(circle at 0% 50%, rgba(188, 42, 30, 0.16), transparent 55%),
-    linear-gradient(135deg, rgba(34, 22, 14, 0.98), rgba(18, 12, 8, 0.99));
-  border: 1px solid rgba(226, 180, 90, 0.48);
-  border-radius: 12px;
+    radial-gradient(circle at 0% 50%, rgba(217, 56, 41, 0.16), transparent 55%),
+    linear-gradient(135deg, #16243b, #0e1726);
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-md);
   padding: 0.85rem 1.1rem;
   margin-bottom: 0.6rem;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
