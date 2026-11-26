@@ -3031,6 +3031,10 @@
       const saved = loadSession(roomParam.toUpperCase());
       const joined = await joinRoomByCode(roomParam, getNickname(), saved ? saved.token : null);
       if (joined) return;
+      directJoinError.hidden = true;
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("room");
+      window.history.replaceState({}, "", cleanUrl.toString());
     }
     switchView("lobby");
     connectLobbyStream();
