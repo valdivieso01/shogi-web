@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Administración | Dojo Shōgi Online</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Shippori+Mincho:wght@600;700;800&family=Yuji+Syuku&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css?v=28">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    .admin-container { max-width: 1280px; margin: 1.25rem auto 3.5rem; padding: 0 1.25rem; }
+    .admin-header-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-inline-start: 3px solid var(--accent-gold);
+      border-radius: 4px;
+      padding: 1.35rem 1.5rem; display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;
+    }
+    .admin-title-wrap { display: flex; align-items: center; gap: 0.95rem; }
+    .admin-hanko-seal {
+      width: 38px; height: 38px; min-width: 38px; border-radius: 2px;
+      background: #a52016;
+      border: 1px solid rgba(255, 232, 214, 0.8);
+      color: #fff6ec; font-family: var(--font-calligraphy); font-size: 1.25rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .admin-title-text h1 {
+      font-family: var(--font-display); font-size: 1.4rem; color: var(--text-main);
+      margin: 0 0 0.2rem;
+    }
+    .admin-title-text p { color: var(--text-muted); margin: 0; font-size: 0.84rem; }
+    .admin-actions { display: flex; align-items: center; gap: 0.75rem; }
+    .admin-kpi-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+      gap: 1px; background: var(--border-subtle); border: 1px solid var(--border-subtle);
+      margin-bottom: 1.35rem;
+    }
+    .kpi-card {
+      background: var(--bg-card);
+      border: none; border-radius: 0;
+      padding: 1rem 1.15rem; display: flex; flex-direction: column; gap: 0.3rem;
+    }
+    .kpi-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; }
+    .kpi-value { font-family: var(--font-display); font-size: 1.75rem; font-weight: 800; color: var(--accent-gold); line-height: 1.1; }
+    .kpi-sub { font-size: 0.74rem; color: var(--text-muted); }
+    .admin-tabs {
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+      background: var(--bg-surface); border: 1px solid var(--border-subtle);
+      border-radius: 0; padding: 0; margin-bottom: 1.15rem;
+    }
+    .admin-tab-btn {
+      background: transparent; border: none; border-inline-end: 1px solid var(--border-subtle);
+      border-block-end: 2px solid transparent; color: var(--text-muted);
+      font-family: var(--font-display); font-size: 0.95rem; font-weight: 700;
+      padding: 0.75rem 1.25rem; cursor: pointer; border-radius: 0; transition: all 0.15s ease;
+    }
+    .admin-tab-btn:last-child { border-inline-end: none; }
+    .admin-tab-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.025); }
+    .admin-tab-btn.active {
+      color: var(--accent-gold);
+      background: var(--bg-card);
+      border-block-end-color: var(--accent-gold);
+    }
+    .admin-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle); border-radius: 4px; padding: 1.25rem;
+    }
+    .table-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
+    .table-search-input {
+      background: #080d18; border: 1px solid var(--border-subtle); color: #fff;
+      padding: 0.48rem 0.85rem; border-radius: 2px; font-size: 0.85rem; width: 280px; max-width: 100%;
+    }
+    .table-responsive { width: 100%; overflow-x: auto; }
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; text-align: left; }
+    .admin-table th {
+      background: var(--bg-surface); color: var(--accent-gold); font-family: var(--font-display);
+      padding: 0.75rem 0.65rem; font-weight: 700; border-bottom: 1px solid var(--border-subtle); white-space: nowrap;
+    }
+    .admin-table td { padding: 0.68rem 0.65rem; border-bottom: 1px solid rgba(255,255,255,0.06); color: #efe6d8; vertical-align: middle; }
+    .admin-table tr:hover td { background: rgba(226, 180, 90, 0.05); }
+    .player-badge-cell { display: inline-flex; align-items: center; gap: 0.45rem; }
+    .user-avatar-mini { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(212,175,55,0.5); }
+    .badge-win { display: inline-block; padding: 0.18rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+    .badge-win-sente { background: rgba(188, 42, 30, 0.28); color: #ffd4cc; border: 1px solid rgba(188, 42, 30, 0.55); }
+    .badge-win-gote { background: rgba(226, 180, 90, 0.18); color: #fae5a3; border: 1px solid rgba(226, 180, 90, 0.45); }
+    .btn-subfilter {
+      background: transparent; border: none; color: #a89f91; font-size: 0.78rem; font-weight: 600;
+      padding: 0.28rem 0.68rem; border-radius: 6px; cursor: pointer; transition: all 0.15s;
+    }
+    .btn-subfilter.active { background: rgba(43, 108, 176, 0.35); color: #e0f2fe; border: 1px solid rgba(99, 179, 237, 0.45); }
+    .auth-gate-box {
+      text-align: center; padding: 3rem 1.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px; max-width: 480px; margin: 4rem auto; box-shadow: 0 16px 40px rgba(0,0,0,0.65);
+    }
+    .auth-gate-box h2 { font-family: var(--font-display); color: var(--accent-gold); margin-bottom: 0.75rem; }
+    .auth-gate-box p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.5rem; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-koma" aria-hidden="true">王</span>
+      <div>
+        <h1>Shōgi <span lang="ja">将棋</span></h1>
+        <p class="subtitle">Panel de Control &amp; Auditoría del Dojo</p>
+      </div>
+    </div>
+    <div class="room-bar">
+      <a href="/" class="btn btn-primary" style="text-decoration:none;">← Volver al Dojo</a>
+    </div>
+  </header>
+
+  <main class="admin-container">
+    <div id="auth-gate" class="auth-gate-box" style="display:none;">
+      <h2>Acceso Restringido</h2>
+      <p>Este panel es exclusivo para administradores de <strong>Dojo Shōgi Online</strong>. Para consultar las estadísticas y registros, inicia sesión con tu cuenta autorizada.</p>
+      <div id="admin-google-btn-slot" style="display:flex; justify-content:center;"></div>
+    </div>
+
+    <div id="admin-content" style="display:none;">
+      <div class="admin-header-card">
+        <div class="admin-title-wrap">
+          <div class="admin-hanko-seal" title="Hanko: Supervisión del Dojo" aria-hidden="true">監</div>
+          <div class="admin-title-text">
+            <h1>Panel de Administración y Métricas (奉行所)</h1>
+            <p>Supervisión en tiempo real de partidas disputadas, jugadores registrados y balance de juego del Dojo.</p>
+          </div>
+        </div>
+        <div class="admin-actions">
+          <div id="admin-user-pill" style="display:inline-flex; align-items:center; gap:0.5rem; background:var(--bg-surface); padding:0.3rem 0.75rem; border-radius:2px; font-size:0.82rem; border:1px solid var(--border-subtle);">
+            <img id="admin-avatar" src="" alt="Admin" style="width:24px; height:24px; border-radius:50%;">
+            <span id="admin-name" style="font-weight:700; color:#fff;"></span>
+          </div>
+          <button type="button" class="btn btn-primary" id="btn-refresh-admin">Refrescar</button>
+        </div>
+      </div>
+
+      <div class="admin-kpi-grid">
+        <div class="kpi-card">
+          <span class="kpi-label">Jugadores Registrados</span>
+          <span class="kpi-value" id="kpi-users">-</span>
+          <span class="kpi-sub">Cuentas con Google OAuth</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Partidas Totales</span>
+          <span class="kpi-value" id="kpi-matches">-</span>
+          <span class="kpi-sub" id="kpi-matches-sub">-</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Modo Historia</span>
+          <span class="kpi-value" id="kpi-story">-</span>
+          <span class="kpi-sub" id="kpi-story-sub">Duelos en Crónicas del Sengoku</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Partidas de Invitados</span>
+          <span class="kpi-value" id="kpi-guests">-</span>
+          <span class="kpi-sub" id="kpi-guests-sub">Sin registro</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">☗ Sente vs ☖ Gote</span>
+          <span class="kpi-value" id="kpi-sides">-</span>
+          <span class="kpi-sub" id="kpi-sides-sub">Victorias de cada bando</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Jaque Mate / Rendición</span>
+          <span class="kpi-value" id="kpi-reasons">-</span>
+          <span class="kpi-sub" id="kpi-reasons-sub">Motivo de finalización</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Promedio Movimientos</span>
+          <span class="kpi-value" id="kpi-moves">-</span>
+          <span class="kpi-sub">Jugadas por partida</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Salas Activas</span>
+          <span class="kpi-value" id="kpi-rooms">-</span>
+          <span class="kpi-sub">En servidor en este instante</span>
+        </div>
+      </div>
+
+      <div class="admin-tabs">
+        <button type="button" class="admin-tab-btn active" data-tab="matches">Registro de Partidas (<span id="matches-count-tab">0</span>)</button>
+        <button type="button" class="admin-tab-btn" data-tab="users">Usuarios Registrados (<span id="users-count-tab">0</span>)</button>
+      </div>
+
+      <!-- PANEL DE PARTIDAS -->
+      <div class="admin-panel" id="panel-matches">
+        <div class="table-toolbar">
+          <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+            <h2 style="font-size:1.1rem; color:var(--accent-gold); margin:0;">Registro de Partidas</h2>
+            <div class="filter-pills-wrap" style="display:inline-flex; gap:0.35rem; background:var(--bg-surface); padding:0.2rem; border-radius:4px; border:1px solid var(--border-subtle); flex-wrap:wrap;">
+              <button type="button" class="btn-subfilter active" data-match-filter="all">Todas (<span id="cnt-sub-all">0</span>)</button>
+              <button type="button" class="btn-subfilter" data-match-filter="story">Modo Historia (<span id="cnt-sub-story">0</span>)</button>
+              <button type="button" class="btn-subfilter" data-match-filter="registered">Registradas (<span id="cnt-sub-reg">0</span>)</button>
+              <button type="button" class="btn-subfilter" data-match-filter="guest">Invitados (<span id="cnt-sub-guest">0</span>)</button>
+            </div>
+          </div>
+          <input type="search" id="search-matches" class="table-search-input" placeholder="Filtrar por sala o jugador...">
+        </div>
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th># ID</th>
+                <th>Tipo</th>
+                <th>Fecha</th>
+                <th>Sala</th>
+                <th>☗ Sente (Negro)</th>
+                <th>☖ Gote (Blanco)</th>
+                <th>Ganador</th>
+                <th>Finalización</th>
+                <th>Movs</th>
+              </tr>
+            </thead>
+            <tbody id="matches-tbody">
+              <tr><td colspan="9" style="text-align:center; padding:2rem;">Cargando partidas...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PANEL DE USUARIOS -->
+      <div class="admin-panel" id="panel-users" style="display:none;">
+        <div class="table-toolbar">
+          <h2 style="font-size:1.1rem; color:var(--accent-gold); margin:0;">Directorio de Jugadores</h2>
+          <input type="search" id="search-users" class="table-search-input" placeholder="Filtrar por nombre o email...">
+        </div>
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th># ID</th>
+                <th>Jugador</th>
+                <th>Email Google</th>
+                <th>Rating ELO</th>
+                <th>Victorias</th>
+                <th>Derrotas</th>
+                <th>Winrate</th>
+                <th>Registrado</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody">
+              <tr><td colspan="8" style="text-align:center; padding:2rem;">Cargando usuarios...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let allMatches = [];
+    let allUsers = [];
+    let currentMatchFilter = "all";
+
+    async function initAdmin() {
+      try {
+        const token = localStorage.getItem("shogi_auth_token");
+        const headers = {};
+        if (token) headers["Authorization"] = "Bearer " + token;
+        const authRes = await fetch("/api/auth/me", { headers });
+        const authData = await authRes.json();
+        if (!authData.authenticated || !authData.user || !authData.user.is_admin) {
+          showAuthGate();
+          return;
+        }
+        if (authData.token) {
+          localStorage.setItem("shogi_auth_token", authData.token);
+        }
+        showDashboard(authData.user);
+        loadAdminData();
+      } catch (err) {
+        showAuthGate();
+      }
+    }
+
+    async function showAuthGate() {
+      document.getElementById("auth-gate").style.display = "block";
+      document.getElementById("admin-content").style.display = "none";
+      try {
+        const confRes = await fetch("/api/auth/config");
+        const conf = await confRes.json();
+        if (conf.google_client_id && window.google && window.google.accounts) {
+          google.accounts.id.initialize({
+            client_id: conf.google_client_id,
+            callback: handleGoogleAuth
+          });
+          google.accounts.id.renderButton(document.getElementById("admin-google-btn-slot"), {
+            theme: "filled_blue", size: "large", text: "signin_with", shape: "pill"
+          });
+        }
+      } catch (_) {}
+    }
+
+    async function handleGoogleAuth(resp) {
+      if (!resp.credential) return;
+      const res = await fetch("/api/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential: resp.credential })
+      });
+      const data = await res.json();
+      if (data.ok && data.user && data.user.is_admin) {
+        if (data.token) {
+          localStorage.setItem("shogi_auth_token", data.token);
+        }
+        window.location.reload();
+      } else {
+        alert("La cuenta conectada (" + (data.user ? data.user.email : "") + ") no tiene permisos de administrador.");
+      }
+    }
+
+    function showDashboard(user) {
+      document.getElementById("auth-gate").style.display = "none";
+      document.getElementById("admin-content").style.display = "block";
+      document.getElementById("admin-name").textContent = user.name || user.email;
+      if (user.picture) {
+        document.getElementById("admin-avatar").src = user.picture;
+      } else {
+        document.getElementById("admin-avatar").style.display = "none";
+      }
+    }
+
+    async function loadAdminData() {
+      try {
+        const token = localStorage.getItem("shogi_auth_token");
+        const headers = {};
+        if (token) headers["Authorization"] = "Bearer " + token;
+        const [ovRes, matchesRes, usersRes] = await Promise.all([
+          fetch("/api/admin/overview", { headers }),
+          fetch("/api/admin/matches?limit=200", { headers }),
+          fetch("/api/admin/users?limit=200", { headers })
+        ]);
+        const ov = await ovRes.json();
+        const m = await matchesRes.json();
+        const u = await usersRes.json();
+
+        if (ov.ok) renderKPIs(ov.stats);
+        if (m.ok) {
+          allMatches = m.matches || [];
+          document.getElementById("matches-count-tab").textContent = allMatches.length;
+          const regCnt = allMatches.filter(x => x.is_registered).length;
+          const guestCnt = allMatches.length - regCnt;
+          const storyCnt = allMatches.filter(x => x.story_chapter != null).length;
+          document.getElementById("cnt-sub-all").textContent = allMatches.length;
+          document.getElementById("cnt-sub-story").textContent = storyCnt;
+          document.getElementById("cnt-sub-reg").textContent = regCnt;
+          document.getElementById("cnt-sub-guest").textContent = guestCnt;
+          applyMatchesFilter();
+        }
+        if (u.ok) {
+          allUsers = u.users || [];
+          document.getElementById("users-count-tab").textContent = allUsers.length;
+          renderUsersTable(allUsers);
+        }
+      } catch (e) {
+        console.error("Error loading admin data:", e);
+      }
+    }
+
+    function renderKPIs(s) {
+      document.getElementById("kpi-users").textContent = s.total_users;
+      document.getElementById("kpi-matches").textContent = s.total_matches;
+      document.getElementById("kpi-matches-sub").textContent = `${s.registered_matches || 0} registradas · ${s.guest_matches || 0} invitados`;
+
+      const storyEl = document.getElementById("kpi-story");
+      if (storyEl) {
+        storyEl.textContent = s.story_matches || 0;
+        document.getElementById("kpi-story-sub").textContent = `${s.story_wins || 0} victorias · ${s.story_losses || 0} derrotas`;
+      }
+
+      document.getElementById("kpi-guests").textContent = s.guest_matches || 0;
+      const totalGuestSide = (s.guest_sente_wins || 0) + (s.guest_gote_wins || 0);
+      const guestSentePct = totalGuestSide > 0 ? Math.round((s.guest_sente_wins * 100) / totalGuestSide) : 50;
+      document.getElementById("kpi-guests-sub").textContent = `☗ ${guestSentePct}% vs ☖ ${100 - guestSentePct}% · Prom. ${s.guest_avg_moves || 0} movs`;
+
+      document.getElementById("kpi-sides").textContent = s.sente_wins + " / " + s.gote_wins;
+      const totalSide = s.sente_wins + s.gote_wins;
+      const sentePct = totalSide > 0 ? Math.round((s.sente_wins * 100) / totalSide) : 50;
+      document.getElementById("kpi-sides-sub").textContent = `☗ Sente: ${sentePct}% · ☖ Gote: ${100 - sentePct}%`;
+
+      document.getElementById("kpi-reasons").textContent = s.checkmate_count + " / " + s.resignation_count;
+      document.getElementById("kpi-reasons-sub").textContent = "Jaque Mate / Rendición";
+      document.getElementById("kpi-moves").textContent = s.avg_moves;
+      document.getElementById("kpi-rooms").textContent = s.active_rooms || 0;
+    }
+
+    function renderMatchesTable(list) {
+      const tbody = document.getElementById("matches-tbody");
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:2rem; color:#888;">No hay partidas registradas todavía.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(m => {
+        let typeBadge = "";
+        if (m.story_chapter != null) {
+          const authTag = m.is_registered ? " · Reg" : " · Inv";
+          typeBadge = `<span style="background:rgba(188,42,30,0.28); color:#ffd4cc; border:1px solid rgba(226,180,90,0.5); padding:0.15rem 0.45rem; border-radius:4px; font-size:0.72rem; font-weight:700;">Historia Cap. ${m.story_chapter}${authTag}</span>`;
+        } else if (m.is_registered) {
+          typeBadge = '<span style="background:rgba(212,175,55,0.2); color:#f1c40f; border:1px solid rgba(212,175,55,0.4); padding:0.15rem 0.45rem; border-radius:4px; font-size:0.72rem; font-weight:700;">Registrada</span>';
+        } else {
+          typeBadge = '<span style="background:rgba(255,255,255,0.08); color:#a89f91; border:1px solid rgba(255,255,255,0.15); padding:0.15rem 0.45rem; border-radius:4px; font-size:0.72rem;">Invitados</span>';
+        }
+        const winnerBadge = m.winner_color === "negro"
+          ? '<span class="badge-win badge-win-sente">☗ Sente (' + escapeHtml(m.sente_name) + ')</span>'
+          : (m.winner_color === "blanco"
+            ? '<span class="badge-win badge-win-gote">☖ Gote (' + escapeHtml(m.gote_name) + ')</span>'
+            : '<span class="badge-win">Tablas</span>');
+        const reason = m.end_reason === "checkmate" ? "Jaque Mate" : (m.end_reason === "resignation" ? "Rendición" : escapeHtml(m.end_reason || "Normal"));
+        const dateStr = m.played_at ? m.played_at.substring(0, 16).replace("T", " ") : "-";
+        const senteAvatar = m.sente_picture ? `<img src="${m.sente_picture}" class="user-avatar-mini" alt="">` : '';
+        const goteAvatar = m.gote_picture ? `<img src="${m.gote_picture}" class="user-avatar-mini" alt="">` : '';
+
+        return `<tr>
+          <td><strong>#${m.id}</strong></td>
+          <td>${typeBadge}</td>
+          <td style="white-space:nowrap; font-size:0.78rem; color:#a89f91;">${dateStr}</td>
+          <td><code>${escapeHtml(m.room_code || "-")}</code></td>
+          <td><span class="player-badge-cell">${senteAvatar} <strong>${escapeHtml(m.sente_name)}</strong></span></td>
+          <td><span class="player-badge-cell">${goteAvatar} <strong>${escapeHtml(m.gote_name)}</strong></span></td>
+          <td>${winnerBadge}</td>
+          <td>${reason}</td>
+          <td><strong>${m.move_count || 0}</strong></td>
+        </tr>`;
+      }).join("");
+    }
+
+    function renderUsersTable(list) {
+      const tbody = document.getElementById("users-tbody");
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:#888;">No hay usuarios registrados todavía.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(u => {
+        const avatar = u.picture ? `<img src="${u.picture}" class="user-avatar-mini" alt="">` : '';
+        const dateStr = u.created_at ? u.created_at.substring(0, 10) : "-";
+        return `<tr>
+          <td><strong>#${u.id}</strong></td>
+          <td><span class="player-badge-cell">${avatar} <strong>${escapeHtml(u.name)}</strong></span></td>
+          <td style="color:#a89f91;">${escapeHtml(u.email || "-")}</td>
+          <td><span style="font-weight:700; color:#f1c40f;">${u.rating || 1200} pts</span></td>
+          <td style="color:#2ecc71;"><strong>${u.wins || 0}</strong></td>
+          <td style="color:#e74c3c;"><strong>${u.losses || 0}</strong></td>
+          <td><strong>${u.win_rate != null ? u.win_rate + '%' : '-'}</strong></td>
+          <td style="font-size:0.78rem; color:#8e8577;">${dateStr}</td>
+        </tr>`;
+      }).join("");
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function applyMatchesFilter() {
+      const q = (document.getElementById("search-matches").value || "").toLowerCase().trim();
+      let filtered = allMatches;
+      if (currentMatchFilter === "story") {
+        filtered = filtered.filter(m => m.story_chapter != null);
+      } else if (currentMatchFilter === "registered") {
+        filtered = filtered.filter(m => m.is_registered);
+      } else if (currentMatchFilter === "guest") {
+        filtered = filtered.filter(m => !m.is_registered);
+      }
+      if (q) {
+        filtered = filtered.filter(m =>
+          (m.room_code || "").toLowerCase().includes(q) ||
+          (m.sente_name || "").toLowerCase().includes(q) ||
+          (m.gote_name || "").toLowerCase().includes(q)
+        );
+      }
+      renderMatchesTable(filtered);
+    }
+
+    document.querySelectorAll(".admin-tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".admin-tab-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const tab = btn.dataset.tab;
+        document.getElementById("panel-matches").style.display = tab === "matches" ? "block" : "none";
+        document.getElementById("panel-users").style.display = tab === "users" ? "block" : "none";
+      });
+    });
+
+    document.querySelectorAll(".btn-subfilter").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".btn-subfilter").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentMatchFilter = btn.dataset.matchFilter;
+        applyMatchesFilter();
+      });
+    });
+
+    document.getElementById("search-matches").addEventListener("input", applyMatchesFilter);
+
+    document.getElementById("search-users").addEventListener("input", (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const filtered = allUsers.filter(u =>
+        (u.name || "").toLowerCase().includes(q) ||
+        (u.email || "").toLowerCase().includes(q)
+      );
+      renderUsersTable(filtered);
+    });
+
+    document.getElementById("btn-refresh-admin").addEventListener("click", () => {
+      loadAdminData();
+    });
+
+    window.addEventListener("DOMContentLoaded", initAdmin);
+  </script>
+</body>
+</html>

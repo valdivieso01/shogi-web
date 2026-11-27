@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="{{ html_lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }} | Dojo Shōgi Online (将棋)</title>
+  <meta name="description" content="{{ description }}">
+  <meta name="author" content="Javier Valdivieso">
+  <meta name="robots" content="index, follow">
+  <meta name="google-adsense-account" content="ca-pub-4665232577336299">
+  <link rel="canonical" href="{{ canonical_url }}">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="{{ og_locale }}">
+  <meta property="og:site_name" content="Dojo Shōgi Online (将棋)">
+  <meta property="og:title" content="{{ title }} | Dojo Shōgi Online">
+  <meta property="og:description" content="{{ description }}">
+  <meta property="og:url" content="{{ canonical_url }}">
+  <meta property="og:image" content="{{ site_url }}/static/og-image.png">
+  <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="48x48" href="/icon-48.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Shippori+Mincho:wght@600;700;800&family=Yuji+Syuku&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css?v=28">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4665232577336299" crossorigin="anonymous"></script>
+  <script>
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-koma" aria-hidden="true">王</span>
+      <div>
+        <h1>Shōgi <span lang="ja">将棋</span></h1>
+        <p class="subtitle">{{ subtitle }}</p>
+      </div>
+    </div>
+    <div class="room-bar">
+      <div class="lang-switch-pill">
+        <a href="{{ other_lang_url }}" class="btn-lang-toggle" title="Cambiar idioma / Switch language" style="text-decoration:none;">
+          <span>{{ toggle_label }}</span>
+        </a>
+      </div>
+      <a href="{{ home_url }}" class="btn btn-primary" style="text-decoration:none;">{{ back_label }}</a>
+    </div>
+  </header>
+
+  <main class="legal-page-container">
+    <article class="legal-card">
+      {{ body_html | safe }}
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="site-footer-top">
+        <div class="site-footer-brand">
+          <div class="site-footer-logo">
+            <span class="footer-koma-icon" aria-hidden="true">王</span>
+            <span>Shōgi Dojo Online (<span lang="ja">将棋</span>)</span>
+          </div>
+          <p>{{ footer_desc }}</p>
+        </div>
+        <nav class="site-footer-nav" aria-label="Enlaces legales y de información">
+          <a href="{{ link_lobby[1] }}">{{ link_lobby[0] }}</a>
+          <a href="{{ link_about[1] }}">{{ link_about[0] }}</a>
+          <a href="{{ link_privacy[1] }}">{{ link_privacy[0] }}</a>
+          <a href="{{ link_terms[1] }}">{{ link_terms[0] }}</a>
+        </nav>
+      </div>
+      <div class="site-footer-bottom">
+        <p>{{ footer_copy | safe }}</p>
+        <p>{{ footer_source | safe }}</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
