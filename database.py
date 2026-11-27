@@ -19,6 +19,7 @@ DATABASE_URL = (
     or ""
 )
 
+_IS_SERVERLESS_PROD = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
 _IS_POSTGRES = False
 _PG_MODULE = None
 
@@ -37,11 +38,13 @@ if DATABASE_URL and (DATABASE_URL.startswith("postgres://") or DATABASE_URL.star
         except ImportError:
             _IS_POSTGRES = False
 
-# On serverless (Vercel / Lambda), bundle directory is read-only; use /tmp for SQLite fallback
-if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or os.path.exists("/tmp"):
-    SQLITE_PATH = "/tmp/shogi.db"
-else:
-    SQLITE_PATH = os.path.join(os.path.dirname(__file__), "shogi.db")
+if _IS_SERVERLESS_PROD and not _IS_POSTGRES:
+    raise RuntimeError(
+        "FATAL: Running in Vercel/Serverless production without a valid PostgreSQL DATABASE_URL / POSTGRES_URL configured."
+    )
+
+# Local SQLite database path (only used in local development outside Vercel)
+SQLITE_PATH = os.path.join(os.path.dirname(__file__), "shogi.db")
 
 
 def get_connection():
@@ -67,11 +70,9 @@ def get_connection():
                 database=p.path.lstrip("/"),
                 ssl_context=ssl_ctx,
             )
-    try:
-        conn = sqlite3.connect(SQLITE_PATH)
-    except Exception:
-        # Fallback to in-memory if even filesystem fails
-        conn = sqlite3.connect(":memory:")
+    if _IS_SERVERLESS_PROD:
+        raise RuntimeError("FATAL: SQLite fallback is disabled in Vercel production.")
+    conn = sqlite3.connect(SQLITE_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -220,6 +221,8 @@ def init_db():
         finally:
             conn.close()
     except Exception as exc:
+        if _IS_SERVERLESS_PROD:
+            raise RuntimeError(f"FATAL: PostgreSQL initialization failed in production: {exc}") from exc
         print(f"[database] init_db notice: {exc}")
 
 

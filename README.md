@@ -47,12 +47,12 @@ Plataforma web multijugador en tiempo real del **Shōgi (Ajedrez Tradicional Jap
 
 ## 🏛️ Arquitectura Modular del Proyecto
 
-El proyecto está organizado con **Flask Blueprints** (`routes/`), **servicios de dominio** (`core/`), **plantillas Jinja2** (`templates/`), **persistencia híbrida PostgreSQL/SQLite** (`database.py`) y **catálogos frontend separados** (`static/`):
+El proyecto está organizado con **Flask Blueprints** (`routes/`), **servicios de dominio** (`core/`), **plantillas Jinja2** (`templates/`), **base de datos PostgreSQL en producción** (`database.py`) y **catálogos frontend separados** (`static/`):
 
 ```text
 shogi-web/
 ├── app.py                     # Entrypoint Flask (76 líneas), registro de Blueprints y cabeceras HTTP/CSP
-├── database.py                # Capa de datos híbrida PostgreSQL (Neon/Vercel) y SQLite local + ELO
+├── database.py                # Capa de datos PostgreSQL obligatoria en Vercel (con SQLite solo para pruebas locales)
 ├── tablero.py                 # Motor de Shōgi: matriz 9×9, promociones (Nari), Nifu y Uchifuzume
 ├── jugador.py                 # Motor de Shōgi: validación de movimientos, jaque (Ōte) y jaque mate
 ├── piezas.py                  # Jerarquía orientada a objetos de las 8 piezas de Shōgi
@@ -101,7 +101,7 @@ python app.py
 
 Abre `http://localhost:5000` en tu navegador.
 
-### Variables de Entorno Opcionales (Producción / Vercel)
-- `POSTGRES_URL` o `DATABASE_URL`: Cadena de conexión a PostgreSQL (si no se define, usa automáticamente `shogi_dojo.db` en SQLite local).
+### Variables de Entorno (Producción / Vercel)
+- `POSTGRES_URL` o `DATABASE_URL` (**Obligatoria en Vercel**): Cadena de conexión a PostgreSQL. En Vercel la aplicación aborta el arranque si no está configurada (en desarrollo local fuera de Vercel usa `shogi.db` en SQLite).
 - `GOOGLE_CLIENT_ID`: ID de cliente OAuth 2.0 para habilitar el inicio de sesión con Google.
 - `ADMIN_EMAILS`: Lista de correos separados por coma con acceso al panel `/admin`.
