@@ -1,8 +1,22 @@
 # Changelog 📜
 
-Todos los cambios notables en **Shōgi Web** se registrarán en este archivo.
+Todos los cambios notables en **Dojo Shōgi Online** se registran en este archivo.
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y este proyecto se adhiere al versionado semántico.
+
+---
+
+## [3.0.0] - 2026-11-27
+
+### ✨ Añadido
+- **Modo Historia: *Crónicas del Sengoku* (5 Capítulos):** Campaña progresiva contra *Ashigaru Tōkichi*, *Hattori Hanzō*, *Takeda Shingen*, *Oda Nobunaga* y *Ōhashi Sōkei* con motor táctico de 5 niveles, retratos *Ukiyo-e*, diálogos reactivos y registro en base de datos.
+- **Rediseño Visual *Indigo Kifu & Tatami Studio*:** Paleta japonesa *Kachi-iro* (`#0A101D`), barra lateral de comando fija, galería de 12 fichas *Koma* 3D para la Academia y bandejas *Komadai* con avatares de perfil e insignias de jugador.
+- **Gestión de Salida, Pausa y Reconexión Online (5 Minutos):** Modal de confirmación al volver al Lobby, tarjeta **«▶ Reanudar Partida Ahora»** en el Lobby y temporizador de 5 minutos en partidas online antes de adjudicar victoria por abandono.
+- **Google Sign-In, Ranking ELO y Panel de Administración (`/admin`):** Persistencia híbrida PostgreSQL/SQLite, Salón de la Fama, historial de partidas y panel `/admin` con KPIs y filtro por modalidad.
+- **Respuesta Instantánea en el Tablero:** Pre-cálculo de `legal_moves` y `legal_drops` en `room.serialize()` y endpoint `/api/rooms/<code>/ai-move` con indicador visual animado.
+
+### 🏗️ Refactorizado
+- **Arquitectura Modular con Flask Blueprints:** Separación del monolito `app.py` (de 3.377 a 76 líneas) en `core/` (`constants.py`, `security.py`, `game_room.py`, `lobby_manager.py`), `routes/` (`seo_pages.py`, `auth_api.py`, `admin_routes.py`, `lobby_api.py`, `rooms_api.py`), `templates/` (`admin.html`, `legal_layout.html`) y catálogos frontend (`static/story_data.js`, `static/tutorial_data.js`).
 
 ---
 
