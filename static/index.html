@@ -231,6 +231,23 @@
             </div>
           </div>
 
+          <!-- Tarjeta de Reanudación de Partida en Curso -->
+          <div class="resume-match-card" id="resume-match-card" hidden>
+            <div class="resume-match-head">
+              <span class="resume-match-tag" id="resume-match-tag">PARTIDA EN PAUSA</span>
+              <code id="resume-match-code">------</code>
+            </div>
+            <p class="resume-match-desc" id="resume-match-desc">Tienes una partida activa lista para continuar.</p>
+            <div class="resume-match-actions">
+              <button type="button" class="btn btn-primary btn-block" id="btn-resume-active-match">
+                ▶ Reanudar Partida Ahora
+              </button>
+              <button type="button" class="btn btn-sm" id="btn-discard-active-match">
+                Descartar
+              </button>
+            </div>
+          </div>
+
           <!-- Consola de Emparejamiento y Juego Rápido -->
           <div class="matchmake-card" id="matchmake-card">
             <div class="matchmake-info">
@@ -828,6 +845,34 @@
     </div>
   </dialog>
 
+  <!-- Modal Nativo: Confirmar Salida de Partida en Curso -->
+  <dialog id="leave-match-dialog" aria-labelledby="leave-dialog-title" closedby="any">
+    <div class="dialog-box">
+      <div class="dialog-header">
+        <h1 id="leave-dialog-title">¿Salir de la partida en curso?</h1>
+        <form method="dialog">
+          <button value="stay" class="btn-icon" aria-label="Volver al tablero">✕</button>
+        </form>
+      </div>
+      <div class="leave-dialog-body">
+        <p id="leave-dialog-desc" class="leave-dialog-desc">
+          Tu partida actual sigue en curso. Elige cómo quieres salir al Lobby:
+        </p>
+        <div class="leave-dialog-actions">
+          <button type="button" class="btn btn-primary btn-block" id="btn-leave-pause">
+            ⏸ Pausar y volver al Lobby (puedes reanudar luego)
+          </button>
+          <button type="button" class="btn btn-danger btn-block" id="btn-leave-forfeit">
+            🏳 Abandonar y rendirse definitivamente
+          </button>
+          <button type="button" class="btn btn-block" id="btn-leave-stay">
+            Seguir jugando en el tablero
+          </button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Modal Nativo: Reportar Error / Bug -->
   <dialog id="bug-dialog" aria-labelledby="bug-dialog-title" closedby="any">
     <div class="dialog-box">
@@ -880,6 +925,6 @@
   <script src="/static/i18n.js?v=8"></script>
   <script src="/static/story_data.js?v=1"></script>
   <script src="/static/tutorial_data.js?v=1"></script>
-  <script src="/static/app.js?v=34" defer></script>
+  <script src="/static/app.js?v=35" defer></script>
 </body>
 </html>

@@ -9,6 +9,7 @@ MAX_ROOMS = 200
 ROOM_IDLE_TTL_SECONDS = 1800  # 30 min
 WAITING_ROOM_TTL_SECONDS = 600  # 10 min
 PLAYER_IDLE_TTL_SECONDS = 120  # 2 min
+ONLINE_FORFEIT_TIMEOUT_SECONDS = 300  # 5 min disconnection forfeit window
 
 SAFE_CODE_RE = re.compile(r"^[A-Z0-9]{6,10}$")
 SAFE_ID_RE = re.compile(r"^[a-zA-Z0-9_-]{4,36}$")

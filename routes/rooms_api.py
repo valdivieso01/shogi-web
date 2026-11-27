@@ -174,6 +174,7 @@ def join_room(room_code: str):
                 if auth_user:
                     room.players[color]["user"] = auth_user
                 room.players[color]["connected"] = True
+                room.players[color]["disconnected_at"] = None
                 room.players[color]["ip"] = ip
                 room.broadcast()
                 return jsonify(
@@ -187,13 +188,14 @@ def join_room(room_code: str):
 
         if not as_spectator:
             for color in ("negro", "blanco"):
-                if not room.players[color]["connected"]:
+                if not room.players[color].get("token"):
                     token = secrets.token_urlsafe(24)
                     default_name = "Sente (Negro)" if color == "negro" else "Gote (Blanco)"
                     room.players[color] = {
                         "token": token,
                         "name": player_name or default_name,
                         "connected": True,
+                        "disconnected_at": None,
                         "ip": ip,
                         "user": auth_user,
                     }
@@ -534,6 +536,68 @@ def resign_room(room_code: str):
         return jsonify({"ok": True, "state": room.serialize()})
 
 
+@rooms_bp.route("/api/rooms/<room_code>/leave", methods=["POST"])
+def leave_room(room_code: str):
+    """Handles temporary disconnect (starts 5-minute countdown) or permanent forfeit."""
+    room = get_room_or_404(room_code)
+    if not room:
+        return jsonify({"error": "Sala no encontrada."}), 404
+
+    data = request.get_json(silent=True) or {}
+    token = data.get("player_token")
+    action = data.get("action", "disconnect")  # "disconnect" | "forfeit" | "reconnect"
+
+    with room.lock:
+        if room.winner:
+            return jsonify({"ok": True, "state": room.serialize()})
+
+        player_color = None
+        for color in ("negro", "blanco"):
+            seat_token = room.players[color].get("token")
+            if (
+                isinstance(token, str)
+                and isinstance(seat_token, str)
+                and hmac.compare_digest(token, seat_token)
+            ):
+                player_color = color
+                break
+
+        if not player_color:
+            return jsonify({"ok": False, "error": "Jugador no identificado en la sala."}), 403
+
+        if action == "reconnect":
+            room.players[player_color]["connected"] = True
+            room.players[player_color]["disconnected_at"] = None
+            room.updated_at = time.time()
+            room.broadcast()
+            return jsonify({"ok": True, "state": room.serialize()})
+
+        if action == "forfeit" and room.mode == "online" and room.get_status() == "playing":
+            winner_color = room.other_color(player_color)
+            room.winner = winner_color
+            room.tablero.juego = "terminado"
+            loser_label = "Sente (Negro ☗)" if player_color == "negro" else "Gote (Blanco ☖)"
+            winner_label = "Sente (Negro ☗)" if winner_color == "negro" else "Gote (Blanco ☖)"
+            room.reason = (
+                f"{loser_label} abandonó la partida. "
+                f"Victoria por abandono para {winner_label}."
+            )
+            room.players[player_color]["connected"] = False
+            room.players[player_color]["disconnected_at"] = None
+            room.finalize_match_record()
+            room.updated_at = time.time()
+            room.broadcast()
+            return jsonify({"ok": True, "state": room.serialize()})
+
+        # Default: temporary disconnect (starts 5-minute reconnect timer in online matches)
+        room.players[player_color]["connected"] = False
+        if not room.players[player_color].get("disconnected_at"):
+            room.players[player_color]["disconnected_at"] = time.time()
+        room.updated_at = time.time()
+        room.broadcast()
+        return jsonify({"ok": True, "state": room.serialize()})
+
+
 @rooms_bp.route("/api/rooms/<room_code>/stream", methods=["GET"])
 def stream_room(room_code: str):
     ip = get_client_ip()
@@ -541,9 +605,26 @@ def stream_room(room_code: str):
     if not room:
         return jsonify({"error": "Sala no encontrada."}), 404
 
+    token = request.args.get("player_token")
+    stream_color = None
     q: queue.Queue = queue.Queue(maxsize=32)
     SECURITY.register_room_sse(ip, q)
     with room.lock:
+        for color in ("negro", "blanco"):
+            seat_token = room.players[color].get("token")
+            if (
+                isinstance(token, str)
+                and isinstance(seat_token, str)
+                and hmac.compare_digest(token, seat_token)
+            ):
+                stream_color = color
+                was_disconnected = bool(room.players[color].get("disconnected_at")) or not room.players[color].get("connected")
+                room.players[color]["connected"] = True
+                room.players[color]["disconnected_at"] = None
+                if was_disconnected:
+                    room.updated_at = time.time()
+                    room.broadcast()
+                break
         room.subscribers.append(q)
         initial_payload = json.dumps(room.serialize())
 
@@ -562,13 +643,21 @@ def stream_room(room_code: str):
                     last_seen_updated = room.updated_at
                     yield f"data: {msg}\n\n"
                 except queue.Empty:
+                    with room.lock:
+                        if room.check_disconnect_forfeit():
+                            last_seen_move = room.move_count
+                            last_seen_updated = room.updated_at
+                            yield f"data: {json.dumps(room.serialize())}\n\n"
+                            continue
                     snap = database.load_active_room(room.code)
                     if snap and (
                         snap.get("move_count", 0) != last_seen_move
                         or float(snap.get("updated_at", 0)) > last_seen_updated
+                        or snap.get("winner") != room.winner
                     ):
                         with room.lock:
                             room.apply_snapshot(snap)
+                            room.check_disconnect_forfeit()
                             last_seen_move = room.move_count
                             last_seen_updated = room.updated_at
                             synced_payload = json.dumps(room.serialize())
@@ -580,6 +669,17 @@ def stream_room(room_code: str):
             with room.lock:
                 if q in room.subscribers:
                     room.subscribers.remove(q)
+                if (
+                    stream_color
+                    and not room.winner
+                    and room.mode == "online"
+                    and room.get_status() == "playing"
+                ):
+                    room.players[stream_color]["connected"] = False
+                    if not room.players[stream_color].get("disconnected_at"):
+                        room.players[stream_color]["disconnected_at"] = time.time()
+                    room.updated_at = time.time()
+                    room.broadcast()
 
     headers = {
         "Content-Type": "text/event-stream",

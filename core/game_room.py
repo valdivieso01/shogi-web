@@ -13,6 +13,7 @@ from typing import Callable, Optional
 import database
 from core.constants import (
     HAND_ORDER,
+    ONLINE_FORFEIT_TIMEOUT_SECONDS,
     PIECE_META,
     PIECE_VALUES,
     ROOM_IDLE_TTL_SECONDS,
@@ -98,8 +99,8 @@ class GameRoom:
         self.created_at = time.time()
         self.updated_at = time.time()
         self.players = {
-            "negro": {"token": None, "name": "Esperando jugador...", "connected": False, "ip": None},
-            "blanco": {"token": None, "name": "Esperando jugador...", "connected": False, "ip": None},
+            "negro": {"token": None, "name": "Esperando jugador...", "connected": False, "ip": None, "disconnected_at": None},
+            "blanco": {"token": None, "name": "Esperando jugador...", "connected": False, "ip": None, "disconnected_at": None},
         }
         self.reset_board()
 
@@ -127,7 +128,11 @@ class GameRoom:
         end_reason = (
             "checkmate"
             if "Jaque Mate" in (self.reason or "")
-            else ("resignation" if "rendido" in (self.reason or "") else "normal")
+            else (
+                "resignation"
+                if "rendido" in (self.reason or "")
+                else ("forfeit" if "abandono" in (self.reason or "").lower() else "normal")
+            )
         )
         story_chap = getattr(self, "story_chapter", None)
         gote_pic_override = ""
@@ -553,9 +558,38 @@ class GameRoom:
     def get_status(self) -> str:
         both_ready = (
             self.mode in ("local", "ai")
-            or (self.players["negro"]["connected"] and self.players["blanco"]["connected"])
+            or (
+                bool(self.players["negro"].get("token"))
+                and bool(self.players["blanco"].get("token"))
+            )
         )
         return "finished" if self.winner else ("playing" if both_ready else "waiting")
+
+    def check_disconnect_forfeit(self) -> bool:
+        """Evaluates if a disconnected online player has exceeded the 5-minute grace window."""
+        if self.winner or self.mode != "online":
+            return False
+        if not (self.players["negro"].get("token") and self.players["blanco"].get("token")):
+            return False
+        now = time.time()
+        for color in ("negro", "blanco"):
+            disc_at = self.players[color].get("disconnected_at")
+            if disc_at and (now - float(disc_at)) >= ONLINE_FORFEIT_TIMEOUT_SECONDS:
+                winner_color = self.other_color(color)
+                self.winner = winner_color
+                self.tablero.juego = "terminado"
+                loser_label = "Sente (Negro ☗)" if color == "negro" else "Gote (Blanco ☖)"
+                winner_label = "Sente (Negro ☗)" if winner_color == "negro" else "Gote (Blanco ☖)"
+                self.reason = (
+                    f"{loser_label} no reconectó tras 5 minutos. "
+                    f"Victoria por abandono para {winner_label}."
+                )
+                self.players[color]["disconnected_at"] = None
+                self.finalize_match_record()
+                self.updated_at = now
+                self.broadcast()
+                return True
+        return False
 
     def _serialize_seat(self, color: str) -> dict:
         p = self.players.get(color, {})
@@ -571,9 +605,15 @@ class GameRoom:
         elif color == "blanco" and is_bot:
             picture = "/static/icon-192.png"
             rating = 1350
+        disc_at = p.get("disconnected_at")
+        remaining_sec = None
+        if disc_at and not self.winner:
+            remaining_sec = max(0, int(ONLINE_FORFEIT_TIMEOUT_SECONDS - (time.time() - float(disc_at))))
         return {
             "name": p.get("name", ""),
             "connected": bool(p.get("connected")),
+            "disconnected_at": float(disc_at) if disc_at else None,
+            "reconnect_seconds_left": remaining_sec,
             "picture": picture or "",
             "rating": rating,
             "is_registered": bool(u),
@@ -583,9 +623,9 @@ class GameRoom:
 
     def serialize_summary(self) -> dict:
         open_seat = None
-        if not self.players["negro"]["connected"]:
+        if not self.players["negro"].get("token"):
             open_seat = "negro"
-        elif not self.players["blanco"]["connected"]:
+        elif not self.players["blanco"].get("token"):
             open_seat = "blanco"
 
         return {
@@ -803,6 +843,7 @@ def cleanup_expired_resources():
     with ROOMS_LOCK:
         expired_codes = []
         for code, room in ROOMS.items():
+            room.check_disconnect_forfeit()
             age = now - room.updated_at
             if room.get_status() == "waiting" and age > WAITING_ROOM_TTL_SECONDS:
                 expired_codes.append(code)
@@ -831,6 +872,8 @@ def get_room_or_404(code: str) -> GameRoom | None:
                 or snap.get("winner") != room.winner
             ):
                 room.apply_snapshot(snap)
+        if room:
+            room.check_disconnect_forfeit()
         return room
 
 

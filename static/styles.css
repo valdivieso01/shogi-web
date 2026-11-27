@@ -3038,3 +3038,94 @@ dialog::backdrop {
   display: flex;
   align-items: center;
 }
+
+/* ==========================================
+   TARJETA DE REANUDACIÓN DE PARTIDA EN CURSO (LOBBY)
+   Y DIÁLOGO DE CONFIRMACIÓN DE SALIDA / ABANDONO
+   ========================================== */
+.resume-match-card {
+  background: linear-gradient(155deg, rgba(16, 28, 49, 0.96), rgba(11, 18, 32, 0.98));
+  border: 1px solid rgba(217, 173, 101, 0.55);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 0.95rem;
+  box-shadow: 0 8px 22px rgba(2, 6, 14, 0.72), inset 0 0 18px rgba(217, 173, 101, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.resume-match-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.resume-match-tag {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  background: rgba(217, 173, 101, 0.14);
+  border: 1px solid rgba(217, 173, 101, 0.36);
+  padding: 0.14rem 0.48rem;
+  border-radius: 999px;
+}
+
+.resume-match-head code {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: #a9cefa;
+  background: rgba(15, 25, 45, 0.85);
+  padding: 0.14rem 0.42rem;
+  border-radius: 4px;
+  border: 1px solid rgba(112, 152, 218, 0.25);
+}
+
+.resume-match-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.resume-match-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.leave-dialog-body {
+  padding: 1.15rem 1.25rem 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.leave-dialog-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.leave-dialog-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.p-meta-pill.is-disconnected {
+  background: rgba(217, 119, 6, 0.22);
+  color: #fde68a;
+  border-color: rgba(245, 158, 11, 0.55);
+  animation: pulse-warn 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse-warn {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+

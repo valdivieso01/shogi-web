@@ -418,10 +418,83 @@
     return url.toString();
   }
 
-  function saveSession(code, token, color) {
+  function saveSession(code, token, color, meta = {}) {
     try {
       sessionStorage.setItem(`shogi_room_${code}`, JSON.stringify({ token, color }));
+      if (code && code !== "ACADEMIA" && color !== "espectador") {
+        localStorage.setItem(
+          "shogi_active_match",
+          JSON.stringify({
+            roomCode: code,
+            token,
+            color,
+            mode: meta.mode || (state.game && state.game.mode) || "ai",
+            storyChapter: meta.storyChapter || (state.game && state.game.story_chapter) || null,
+            rivalName:
+              meta.rivalName ||
+              (state.game && state.game.players && state.game.players.blanco && state.game.players.blanco.name) ||
+              "Sensei Bot",
+            moveCount: meta.moveCount ?? ((state.game && state.game.move_count) || 0),
+            savedAt: Date.now(),
+          })
+        );
+      }
     } catch (_) {}
+  }
+
+  function clearActiveMatchStorage() {
+    try {
+      localStorage.removeItem("shogi_active_match");
+    } catch (_) {}
+  }
+
+  function getActiveMatchStorage() {
+    try {
+      const raw = localStorage.getItem("shogi_active_match");
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      // Expire after 30 minutes (matching server ROOM_IDLE_TTL_SECONDS)
+      if (!parsed || !parsed.roomCode || Date.now() - (parsed.savedAt || 0) > 30 * 60 * 1000) {
+        localStorage.removeItem("shogi_active_match");
+        return null;
+      }
+      return parsed;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function renderResumeMatchBanner() {
+    const card = document.getElementById("resume-match-card");
+    const tagEl = document.getElementById("resume-match-tag");
+    const codeEl = document.getElementById("resume-match-code");
+    const descEl = document.getElementById("resume-match-desc");
+    if (!card) return;
+
+    const active = getActiveMatchStorage();
+    if (!active) {
+      card.hidden = true;
+      return;
+    }
+    const isEn = window.i18n && window.i18n.getLanguage() === "en";
+    card.hidden = false;
+    codeEl.textContent = active.roomCode;
+    if (active.storyChapter) {
+      tagEl.textContent = isEn ? `STORY CH. ${active.storyChapter} PAUSED` : `MODO HISTORIA CAP. ${active.storyChapter}`;
+      descEl.textContent = isEn
+        ? `Battle in progress vs ${active.rivalName} (${active.moveCount} moves).`
+        : `Duelo en curso contra ${active.rivalName} (${active.moveCount} jugadas).`;
+    } else if (active.mode === "online") {
+      tagEl.textContent = isEn ? "ONLINE MATCH (5 MIN WINDOW)" : "PARTIDA ONLINE (5 MIN PARA VOLVER)";
+      descEl.textContent = isEn
+        ? `Your online room #${active.roomCode} is holding your seat for 5 minutes.`
+        : `Tu sala online #${active.roomCode} guarda tu asiento durante 5 minutos.`;
+    } else {
+      tagEl.textContent = isEn ? "MATCH IN PROGRESS" : "PARTIDA EN PAUSA";
+      descEl.textContent = isEn
+        ? `Practice match vs ${active.rivalName} ready to resume.`
+        : `Partida en curso contra ${active.rivalName} lista para continuar.`;
+    }
   }
 
   function loadSession(code) {
@@ -854,6 +927,19 @@
         if (ratingVal) {
           pills.push(`<span class="p-meta-pill is-elo">${ratingVal} ELO</span>`);
         }
+        if (state.game.mode === "online" && !state.game.winner && pInfo.disconnected_at) {
+          const leftSec = Math.max(
+            0,
+            Math.ceil(300 - (Date.now() / 1000 - Number(pInfo.disconnected_at)))
+          );
+          const mm = String(Math.floor(leftSec / 60)).padStart(2, "0");
+          const ss = String(leftSec % 60).padStart(2, "0");
+          pills.push(
+            `<span class="p-meta-pill is-disconnected">⏳ ${
+              isEn ? `Reconnecting (${mm}:${ss})` : `Desconectado (${mm}:${ss})`
+            }</span>`
+          );
+        }
         badgesEl.innerHTML = pills.join("");
       }
 
@@ -923,8 +1009,7 @@
     const shareUrl = getInviteUrl(state.roomCode);
     inviteUrlInput.value = shareUrl;
     const waitingOpponent =
-      state.game.mode === "online" &&
-      (!state.game.players.negro.connected || !state.game.players.blanco.connected);
+      state.game.mode === "online" && state.game.status === "waiting";
     inviteCallout.hidden = !waitingOpponent;
     btnCopyLink.hidden = state.view !== "game" || state.game.mode !== "online";
 
@@ -938,10 +1023,33 @@
         : `¡Jaque al Rey de <strong>${checkedName}</strong> (<span lang="ja">王手</span>)!`;
     }
 
+    const oppColor = state.myColor === "blanco" ? "negro" : "blanco";
+    const oppInfo = state.game.players && state.game.players[oppColor];
+    const oppDisconnected =
+      state.game.mode === "online" &&
+      state.game.status === "playing" &&
+      !state.game.winner &&
+      oppInfo &&
+      oppInfo.disconnected_at;
+
     if (state.game.winner) {
+      clearActiveMatchStorage();
       turnBanner.classList.remove("is-thinking");
       turnBanner.classList.add("winner");
       turnBanner.textContent = state.game.reason || (isEn ? "Game Over." : "Partida terminada.");
+    } else if (oppDisconnected) {
+      turnBanner.classList.remove("winner");
+      turnBanner.classList.add("is-thinking");
+      const leftSec = Math.max(
+        0,
+        Math.ceil(300 - (Date.now() / 1000 - Number(oppInfo.disconnected_at)))
+      );
+      const mm = String(Math.floor(leftSec / 60)).padStart(2, "0");
+      const ss = String(leftSec % 60).padStart(2, "0");
+      const msg = isEn
+        ? `⏳ Opponent disconnected — Victory by forfeit in ${mm}:${ss} if they don't return.`
+        : `⏳ Rival desconectado — Victoria por abandono en ${mm}:${ss} si no reconecta.`;
+      turnBanner.innerHTML = `<span class="thinking-spinner" aria-hidden="true"></span><span>${escapeHTML(msg)}</span>`;
     } else if (state.busyAction) {
       turnBanner.classList.remove("winner");
       turnBanner.classList.add("is-thinking");
@@ -1276,7 +1384,8 @@
     if (state.roomSource) {
       state.roomSource.close();
     }
-    const es = new EventSource(`/api/rooms/${code}/stream`);
+    const tokenParam = state.playerToken ? `?player_token=${encodeURIComponent(state.playerToken)}` : "";
+    const es = new EventSource(`/api/rooms/${code}/stream${tokenParam}`);
     state.roomSource = es;
 
     es.onopen = () => {
@@ -1297,6 +1406,14 @@
         state.game = newState;
         if (turnChanged) {
           clearSelection();
+        }
+        if (!newState.winner && state.roomCode && state.playerToken) {
+          saveSession(state.roomCode, state.playerToken, state.myColor, {
+            mode: newState.mode,
+            storyChapter: newState.story_chapter,
+            rivalName: newState.players && newState.players.blanco && newState.players.blanco.name,
+            moveCount: newState.move_count,
+          });
         }
         renderGameAll();
       } catch (_) {}
@@ -1322,7 +1439,16 @@
     state.flipped = data.assigned_color === "blanco";
     clearSelection();
 
-    saveSession(state.roomCode, state.playerToken, state.myColor);
+    if (!state.game.winner) {
+      saveSession(state.roomCode, state.playerToken, state.myColor, {
+        mode: state.game.mode,
+        storyChapter: state.game.story_chapter,
+        rivalName: state.game.players && state.game.players.blanco && state.game.players.blanco.name,
+        moveCount: state.game.move_count,
+      });
+    } else {
+      clearActiveMatchStorage();
+    }
     const url = new URL(window.location.href);
     url.searchParams.set("room", state.roomCode);
     window.history.pushState({}, "", url.toString());
@@ -1338,6 +1464,21 @@
       connDot.classList.add("online");
     }
     renderGameAll();
+  }
+
+  async function notifyRoomLeave(action = "disconnect") {
+    if (!state.roomCode || !state.playerToken || state.tutorialActive) return;
+    try {
+      await fetch(`/api/rooms/${state.roomCode}/leave`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          player_token: state.playerToken,
+          action,
+        }),
+        keepalive: true,
+      });
+    } catch (_) {}
   }
 
   function returnToLobby() {
@@ -1357,9 +1498,71 @@
     window.history.pushState({}, "", url.toString());
 
     switchView("lobby");
+    renderResumeMatchBanner();
     renderStoryCampaign();
     connectLobbyStream();
     loadCommunityStats();
+  }
+
+  function requestLeaveMatch() {
+    // If tutorial, spectator, or finished game, exit immediately without dialog
+    if (
+      state.tutorialActive ||
+      !state.game ||
+      state.game.winner ||
+      state.myColor === "espectador" ||
+      (state.game.mode === "online" && state.game.status === "waiting" && state.game.move_count === 0)
+    ) {
+      if (state.game && state.game.winner) {
+        clearActiveMatchStorage();
+      }
+      returnToLobby();
+      return;
+    }
+
+    const leaveDialog = document.getElementById("leave-match-dialog");
+    const titleEl = document.getElementById("leave-dialog-title");
+    const descEl = document.getElementById("leave-dialog-desc");
+    const btnPause = document.getElementById("btn-leave-pause");
+    const btnForfeit = document.getElementById("btn-leave-forfeit");
+    const btnStay = document.getElementById("btn-leave-stay");
+    if (!leaveDialog) {
+      returnToLobby();
+      return;
+    }
+
+    const isEn = window.i18n && window.i18n.getLanguage() === "en";
+    const isOnlineActive = state.game.mode === "online" && state.game.status === "playing";
+
+    if (isOnlineActive) {
+      titleEl.textContent = isEn ? "Leave online match in progress?" : "¿Salir de la partida online en curso?";
+      descEl.textContent = isEn
+        ? "If you pause to the Lobby, your seat is held for 5 minutes so you can resume. If you don't return within 5 minutes (or if you forfeit now), your opponent wins by abandonment."
+        : "Si sales al Lobby temporalmente, tu asiento se guardará durante 5 minutos para que puedas reanudar. Si no regresas en 5 minutos (o si eliges abandonar ahora), tu rival ganará por abandono.";
+      btnPause.textContent = isEn
+        ? "⏸ Go to Lobby (5-minute window to resume)"
+        : "⏸ Ir al Lobby (tienes 5 minutos para reanudar)";
+      btnForfeit.textContent = isEn
+        ? "🏳 Forfeit match now (Victory for opponent)"
+        : "🏳 Abandonar y dar por perdida la partida";
+      btnForfeit.hidden = false;
+    } else {
+      const rivalName =
+        (state.game.players && state.game.players.blanco && state.game.players.blanco.name) || "Sensei Bot";
+      titleEl.textContent = isEn ? "Pause match and return to Lobby?" : "¿Pausar partida y volver al Lobby?";
+      descEl.textContent = isEn
+        ? `Your match against ${rivalName} will stay saved for 30 minutes so you can resume from the Lobby whenever you want, or you can discard it.`
+        : `Tu partida contra ${rivalName} quedará guardada en pausa durante 30 minutos para que puedas reanudarla desde el Lobby con un clic, o puedes descartarla ahora.`;
+      btnPause.textContent = isEn
+        ? "⏸ Save in pause & go to Lobby"
+        : "⏸ Guardar en pausa y volver al Lobby";
+      btnForfeit.textContent = isEn
+        ? "🗑 Discard match without saving"
+        : "🗑 Descartar partida y salir";
+      btnForfeit.hidden = false;
+    }
+    btnStay.textContent = isEn ? "Continue playing on board" : "Seguir jugando en el tablero";
+    leaveDialog.showModal();
   }
 
   /* ==========================================
@@ -1723,7 +1926,84 @@
     }
   });
 
-  btnBackLobby.addEventListener("click", returnToLobby);
+  btnBackLobby.addEventListener("click", requestLeaveMatch);
+
+  const leaveDialogEl = document.getElementById("leave-match-dialog");
+  const btnLeavePause = document.getElementById("btn-leave-pause");
+  const btnLeaveForfeit = document.getElementById("btn-leave-forfeit");
+  const btnLeaveStay = document.getElementById("btn-leave-stay");
+
+  if (btnLeavePause && leaveDialogEl) {
+    btnLeavePause.addEventListener("click", async () => {
+      leaveDialogEl.close();
+      if (state.game && !state.game.winner && state.roomCode && state.playerToken) {
+        saveSession(state.roomCode, state.playerToken, state.myColor, {
+          mode: state.game.mode,
+          storyChapter: state.game.story_chapter,
+          rivalName: state.game.players && state.game.players.blanco && state.game.players.blanco.name,
+          moveCount: state.game.move_count,
+        });
+        if (state.game.mode === "online") {
+          await notifyRoomLeave("disconnect");
+        }
+      }
+      returnToLobby();
+    });
+  }
+
+  if (btnLeaveForfeit && leaveDialogEl) {
+    btnLeaveForfeit.addEventListener("click", async () => {
+      leaveDialogEl.close();
+      clearActiveMatchStorage();
+      if (state.game && !state.game.winner && state.roomCode && state.playerToken) {
+        if (state.game.mode === "online" && state.game.status === "playing") {
+          await notifyRoomLeave("forfeit");
+        }
+      }
+      returnToLobby();
+    });
+  }
+
+  if (btnLeaveStay && leaveDialogEl) {
+    btnLeaveStay.addEventListener("click", () => {
+      leaveDialogEl.close();
+    });
+  }
+
+  const btnResumeActiveMatch = document.getElementById("btn-resume-active-match");
+  const btnDiscardActiveMatch = document.getElementById("btn-discard-active-match");
+
+  if (btnResumeActiveMatch) {
+    btnResumeActiveMatch.addEventListener("click", async () => {
+      const active = getActiveMatchStorage();
+      if (!active || !active.roomCode) {
+        renderResumeMatchBanner();
+        return;
+      }
+      const joined = await joinRoomByCode(active.roomCode, getNickname(), active.token, false, true);
+      if (!joined) {
+        clearActiveMatchStorage();
+        renderResumeMatchBanner();
+      }
+    });
+  }
+
+  if (btnDiscardActiveMatch) {
+    btnDiscardActiveMatch.addEventListener("click", async () => {
+      const active = getActiveMatchStorage();
+      if (active && active.mode === "online" && active.roomCode && active.token) {
+        try {
+          await fetch(`/api/rooms/${active.roomCode}/leave`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ player_token: active.token, action: "forfeit" }),
+          });
+        } catch (_) {}
+      }
+      clearActiveMatchStorage();
+      renderResumeMatchBanner();
+    });
+  }
 
   document.getElementById("btn-start-tutorial-top").addEventListener("click", () => startTutorial(0));
   document.getElementById("btn-start-tutorial-hero").addEventListener("click", () => startTutorial(0));
@@ -1947,6 +2227,7 @@
 
   window.addEventListener("shogi:langchange", () => {
     syncAudioUI();
+    renderResumeMatchBanner();
     renderStoryCampaign();
     if (state.view === "game") {
       renderGameAll();
@@ -1959,6 +2240,44 @@
         renderLobby();
       }
       loadCommunityStats();
+    }
+  });
+
+  // Live 1-second ticker for the 5-minute online reconnection countdown
+  setInterval(() => {
+    if (
+      state.view === "game" &&
+      state.game &&
+      state.game.mode === "online" &&
+      !state.game.winner &&
+      state.game.players &&
+      ((state.game.players.negro && state.game.players.negro.disconnected_at) ||
+        (state.game.players.blanco && state.game.players.blanco.disconnected_at))
+    ) {
+      renderPlayerPanels();
+      renderStatusAndHistory();
+    }
+  }, 1000);
+
+  // Best-effort beacon when tab is closed or hidden during an active online match
+  window.addEventListener("pagehide", () => {
+    if (
+      state.view === "game" &&
+      state.game &&
+      state.game.mode === "online" &&
+      state.game.status === "playing" &&
+      !state.game.winner &&
+      state.roomCode &&
+      state.playerToken &&
+      navigator.sendBeacon
+    ) {
+      try {
+        const blob = new Blob(
+          [JSON.stringify({ player_token: state.playerToken, action: "disconnect" })],
+          { type: "application/json" }
+        );
+        navigator.sendBeacon(`/api/rooms/${state.roomCode}/leave`, blob);
+      } catch (_) {}
     }
   });
 
@@ -2487,6 +2806,7 @@
       window.history.replaceState({}, "", cleanUrl.toString());
     }
     switchView("lobby");
+    renderResumeMatchBanner();
     connectLobbyStream();
     loadCommunityStats();
   }
