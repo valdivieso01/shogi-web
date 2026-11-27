@@ -90,8 +90,11 @@ def sitemap_xml():
     pages = [
         ("/", "daily", "1.0"),
         ("/sobre-nosotros", "monthly", "0.8"),
+        ("/about", "monthly", "0.8"),
         ("/politica-de-privacidad", "monthly", "0.7"),
+        ("/privacy", "monthly", "0.7"),
         ("/terminos-de-servicio", "monthly", "0.7"),
+        ("/terms", "monthly", "0.7"),
     ]
     urls_xml = "".join(
         f"""  <url>
