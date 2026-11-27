@@ -870,7 +870,30 @@ class GameRoom:
             },
         }
 
+    def serialize_legal_actions(self) -> tuple[dict, dict]:
+        if self.winner:
+            return {}, {}
+        color = self.turn
+        if self.mode == "ai" and color == "blanco":
+            return {}, {}
+        moves_map = {}
+        for r in range(9):
+            for c in range(9):
+                p = self.tablero.tab[r][c]
+                if p is not None and p.color == color:
+                    m = self.get_legal_moves_for_piece(self.tablero, color, r, c)
+                    if m:
+                        moves_map[f"{r},{c}"] = m
+        drops_map = {}
+        hand_codes = {p.nombre for p in self.tablero.piezas_muertas if p.color == color}
+        for code in hand_codes:
+            d = self.get_legal_drops_for_piece(self.tablero, color, code)
+            if d:
+                drops_map[code] = d
+        return moves_map, drops_map
+
     def serialize(self) -> dict:
+        legal_moves, legal_drops = self.serialize_legal_actions()
         return {
             "room_code": self.code,
             "title": self.title,
@@ -888,6 +911,8 @@ class GameRoom:
             "history": self.history[-40:],
             "board": self.serialize_board(),
             "captured": self.serialize_captured(),
+            "legal_moves": legal_moves,
+            "legal_drops": legal_drops,
             "players": {
                 "negro": self._serialize_seat("negro"),
                 "blanco": self._serialize_seat("blanco"),
@@ -2835,6 +2860,75 @@ def join_room(room_code: str):
         )
 
 
+def restore_room_from_client_state(clean: str, client_state: dict, player_token: str | None, auth_user: dict | None, ip: str) -> GameRoom | None:
+    if not isinstance(client_state, dict) or not isinstance(client_state.get("board"), list):
+        return None
+    mode = client_state.get("mode", "ai")
+    story_chap = client_state.get("story_chapter")
+    room = GameRoom(
+        code=clean,
+        mode=mode,
+        visibility=client_state.get("visibility", "private"),
+        title=client_state.get("title", f"Sala #{clean}"),
+        owner_ip=ip,
+        ai_level=client_state.get("ai_level", 3),
+        story_chapter=story_chap,
+    )
+    board_grid = client_state.get("board", [])
+    if len(board_grid) == 9:
+        for r in range(9):
+            for c in range(9):
+                cell = board_grid[r][c]
+                if cell is None:
+                    room.tablero.tab[r][c] = None
+                else:
+                    room.tablero.tab[r][c] = build_piece_instance(
+                        cell["code"],
+                        cell["color"],
+                        bool(cell.get("promoted", False)),
+                    )
+    dead_list = []
+    captured = client_state.get("captured") or {}
+    for owner_color in ("negro", "blanco"):
+        for item in captured.get(owner_color, []):
+            code_p = item.get("code")
+            cnt = int(item.get("count", 0))
+            if code_p in PIECE_META and cnt > 0:
+                for _ in range(cnt):
+                    dead_list.append(build_piece_instance(code_p, owner_color, False))
+    room.tablero.piezas_muertas = dead_list
+    room.turn = client_state.get("turn", "negro")
+    room.in_check = client_state.get("in_check")
+    room.winner = client_state.get("winner")
+    room.reason = client_state.get("reason")
+    room.move_count = int(client_state.get("move_count", 0))
+    room.last_move = client_state.get("last_move")
+    room.history = client_state.get("history", [])
+    room.tablero.juego = "terminado" if room.winner else "iniciado"
+
+    p_info = client_state.get("players") or {}
+    sente_name = (p_info.get("negro") or {}).get("name", "Sente")
+    gote_name = (p_info.get("blanco") or {}).get("name", "Gote")
+    tok = player_token or secrets.token_urlsafe(24)
+    room.players["negro"] = {
+        "token": tok,
+        "name": sente_name,
+        "connected": True,
+        "ip": ip,
+        "user": auth_user,
+    }
+    room.players["blanco"] = {
+        "token": "AI_BOT" if mode == "ai" else tok,
+        "name": gote_name,
+        "connected": True,
+        "ip": "AI" if mode == "ai" else ip,
+        "user": None,
+    }
+    ROOMS[clean] = room
+    room.persist()
+    return room
+
+
 @app.route("/api/rooms/<room_code>/sync", methods=["POST"])
 def sync_room_state(room_code: str):
     """Restores an active room from client state if a serverless instance lost in-memory state."""
@@ -2854,72 +2948,9 @@ def sync_room_state(room_code: str):
     with ROOMS_LOCK:
         room = get_room_or_404(clean)
         if room is None:
-            mode = client_state.get("mode", "ai")
-            story_chap = client_state.get("story_chapter")
-            room = GameRoom(
-                code=clean,
-                mode=mode,
-                visibility=client_state.get("visibility", "private"),
-                title=client_state.get("title", f"Sala #{clean}"),
-                owner_ip=ip,
-                ai_level=client_state.get("ai_level", 3),
-                story_chapter=story_chap,
-            )
-            # Reconstruct board 9x9
-            board_grid = client_state.get("board", [])
-            if len(board_grid) == 9:
-                for r in range(9):
-                    for c in range(9):
-                        cell = board_grid[r][c]
-                        if cell is None:
-                            room.tablero.tab[r][c] = None
-                        else:
-                            room.tablero.tab[r][c] = build_piece_instance(
-                                cell["code"],
-                                cell["color"],
-                                bool(cell.get("promoted", False)),
-                            )
-            # Reconstruct captured pieces in hand (piezas_muertas store captured enemy pieces with the owner's color)
-            dead_list = []
-            captured = client_state.get("captured") or {}
-            for owner_color in ("negro", "blanco"):
-                for item in captured.get(owner_color, []):
-                    code_p = item.get("code")
-                    cnt = int(item.get("count", 0))
-                    if code_p in PIECE_META and cnt > 0:
-                        for _ in range(cnt):
-                            dead_list.append(build_piece_instance(code_p, owner_color, False))
-            room.tablero.piezas_muertas = dead_list
-            room.turn = client_state.get("turn", "negro")
-            room.in_check = client_state.get("in_check")
-            room.winner = client_state.get("winner")
-            room.reason = client_state.get("reason")
-            room.move_count = int(client_state.get("move_count", 0))
-            room.last_move = client_state.get("last_move")
-            room.history = client_state.get("history", [])
-            room.tablero.juego = "terminado" if room.winner else "iniciado"
-
-            p_info = client_state.get("players") or {}
-            sente_name = (p_info.get("negro") or {}).get("name", "Sente")
-            gote_name = (p_info.get("blanco") or {}).get("name", "Gote")
-            tok = player_token or secrets.token_urlsafe(24)
-            room.players["negro"] = {
-                "token": tok,
-                "name": sente_name,
-                "connected": True,
-                "ip": ip,
-                "user": auth_user,
-            }
-            room.players["blanco"] = {
-                "token": "AI_BOT" if mode == "ai" else tok,
-                "name": gote_name,
-                "connected": True,
-                "ip": "AI" if mode == "ai" else ip,
-                "user": None,
-            }
-            ROOMS[clean] = room
-            room.persist()
-
+            room = restore_room_from_client_state(clean, client_state, player_token, auth_user, ip)
+        if not room:
+            return jsonify({"error": "No se pudo sincronizar la sala."}), 400
         return jsonify({"ok": True, "state": room.serialize()})
 
 
@@ -2981,15 +3012,20 @@ def make_move(room_code: str):
     if not SECURITY.check_rate_limit(ip, "game_action", max_calls=45, window_sec=60):
         return jsonify({"error": "Demasiadas jugadas por minuto desde tu IP."}), 429
 
+    data = request.get_json(silent=True) or {}
+    token = data.get("player_token")
     room = get_room_or_404(room_code)
+    if not room and isinstance(data.get("client_state"), dict):
+        auth_user = get_authenticated_user(request, data.get("auth_token"))
+        with ROOMS_LOCK:
+            room = restore_room_from_client_state(room_code.strip().upper(), data["client_state"], token, auth_user, ip)
     if not room:
         return jsonify({"error": "Sala no encontrada."}), 404
 
-    data = request.get_json(silent=True) or {}
-    token = data.get("player_token")
     from_pos = data.get("from")
     to_pos = data.get("to")
     promote_choice = data.get("promote")
+    defer_ai = bool(data.get("defer_ai", False))
 
     if not (isinstance(from_pos, list) and isinstance(to_pos, list) and len(from_pos) == 2 and len(to_pos) == 2):
         return jsonify({"error": "Coordenadas inválidas."}), 400
@@ -3054,10 +3090,12 @@ def make_move(room_code: str):
         room.history.append(room.last_move)
 
         room.evaluate_post_turn(color)
-        if room.mode == "ai" and not room.winner and room.turn == "blanco":
+        ai_pending = bool(room.mode == "ai" and not room.winner and room.turn == "blanco")
+        if ai_pending and not defer_ai:
             room.play_ai_turn("blanco")
+            ai_pending = False
         room.broadcast()
-        return jsonify({"ok": True, "state": room.serialize()})
+        return jsonify({"ok": True, "ai_pending": ai_pending, "state": room.serialize()})
 
 
 @app.route("/api/rooms/<room_code>/drop", methods=["POST"])
@@ -3066,14 +3104,19 @@ def make_drop(room_code: str):
     if not SECURITY.check_rate_limit(ip, "game_action", max_calls=45, window_sec=60):
         return jsonify({"error": "Demasiadas jugadas por minuto desde tu IP."}), 429
 
+    data = request.get_json(silent=True) or {}
+    token = data.get("player_token")
     room = get_room_or_404(room_code)
+    if not room and isinstance(data.get("client_state"), dict):
+        auth_user = get_authenticated_user(request, data.get("auth_token"))
+        with ROOMS_LOCK:
+            room = restore_room_from_client_state(room_code.strip().upper(), data["client_state"], token, auth_user, ip)
     if not room:
         return jsonify({"error": "Sala no encontrada."}), 404
 
-    data = request.get_json(silent=True) or {}
-    token = data.get("player_token")
     piece_code = (data.get("piece") or "").strip().upper()
     to_pos = data.get("to")
+    defer_ai = bool(data.get("defer_ai", False))
 
     if not (isinstance(to_pos, list) and len(to_pos) == 2 and piece_code in PIECE_META):
         return jsonify({"error": "Datos de reincorporación inválidos."}), 400
@@ -3121,9 +3164,32 @@ def make_drop(room_code: str):
         room.history.append(room.last_move)
 
         room.evaluate_post_turn(color)
+        ai_pending = bool(room.mode == "ai" and not room.winner and room.turn == "blanco")
+        if ai_pending and not defer_ai:
+            room.play_ai_turn("blanco")
+            ai_pending = False
+        room.broadcast()
+        return jsonify({"ok": True, "ai_pending": ai_pending, "state": room.serialize()})
+
+
+@app.route("/api/rooms/<room_code>/ai-move", methods=["POST"])
+def make_ai_move(room_code: str):
+    ip = get_client_ip()
+    data = request.get_json(silent=True) or {}
+    token = data.get("player_token")
+    room = get_room_or_404(room_code)
+    if not room and isinstance(data.get("client_state"), dict):
+        auth_user = get_authenticated_user(request, data.get("auth_token"))
+        with ROOMS_LOCK:
+            room = restore_room_from_client_state(room_code.strip().upper(), data["client_state"], token, auth_user, ip)
+    if not room:
+        return jsonify({"error": "Sala no encontrada."}), 404
+
+    with room.lock:
+        room.updated_at = time.time()
         if room.mode == "ai" and not room.winner and room.turn == "blanco":
             room.play_ai_turn("blanco")
-        room.broadcast()
+            room.broadcast()
         return jsonify({"ok": True, "state": room.serialize()})
 
 

@@ -1522,10 +1522,21 @@
     }
 
     if (state.game.winner) {
+      turnBanner.classList.remove("is-thinking");
       turnBanner.classList.add("winner");
       turnBanner.textContent = state.game.reason || (isEn ? "Game Over." : "Partida terminada.");
-    } else {
+    } else if (state.busyAction) {
       turnBanner.classList.remove("winner");
+      turnBanner.classList.add("is-thinking");
+      const rivalName = (state.game.players.blanco && state.game.players.blanco.name) || "Sensei Bot";
+      const busyLabel = state.busyMessage || (
+        state.game.mode === "ai" && state.game.turn === "blanco"
+          ? (isEn ? `${rivalName} is thinking...` : `${rivalName} está pensando su jugada...`)
+          : (isEn ? "Processing move..." : "Ejecutando jugada...")
+      );
+      turnBanner.innerHTML = `<span class="thinking-spinner" aria-hidden="true"></span><span>${escapeHTML(busyLabel)}</span>`;
+    } else {
+      turnBanner.classList.remove("winner", "is-thinking");
       const turnLabel = state.game.turn === "negro"
         ? (isEn ? "Black (Sente ☗)" : "Sente (Negro ☗)")
         : (isEn ? "White (Gote ☖)" : "Gote (Blanco ☖)");
@@ -1587,7 +1598,13 @@
   }
 
   async function fetchLegalMovesForCell(row, col) {
-    if (!state.roomCode) return;
+    if (!state.roomCode || !state.game) return;
+    // 1. Instant zero-network lookup from pre-calculated legal_moves map
+    if (state.game.legal_moves && typeof state.game.legal_moves === "object") {
+      state.legalTargets = state.game.legal_moves[`${row},${col}`] || [];
+      renderBoard();
+      return;
+    }
     let res = await fetch(
       `/api/rooms/${state.roomCode}/legal-moves?row=${row}&col=${col}&color=${state.game.turn}`
     );
@@ -1606,7 +1623,13 @@
   }
 
   async function fetchLegalDrops(color, code) {
-    if (!state.roomCode) return;
+    if (!state.roomCode || !state.game) return;
+    // 1. Instant zero-network lookup from pre-calculated legal_drops map
+    if (state.game.legal_drops && typeof state.game.legal_drops === "object") {
+      state.legalTargets = state.game.legal_drops[code] || [];
+      renderBoard();
+      return;
+    }
     let res = await fetch(
       `/api/rooms/${state.roomCode}/legal-moves?drop=${encodeURIComponent(code)}&color=${color}`
     );
@@ -1654,7 +1677,7 @@
   }
 
   async function onCellClick(row, col) {
-    if (!state.game || state.game.winner) return;
+    if (!state.game || state.game.winner || state.busyAction) return;
 
     if (state.tutorialActive) {
       await onTutorialCellClick(row, col);
@@ -1702,6 +1725,7 @@
   }
 
   async function onHandPieceClick(color, code) {
+    if (state.busyAction) return;
     if (state.tutorialActive) {
       onTutorialHandClick(color, code);
       return;
@@ -1719,63 +1743,114 @@
     await fetchLegalDrops(color, code);
   }
 
-  async function submitMove(from, to, promote) {
-    const payload = JSON.stringify({
-      player_token: state.playerToken,
-      from,
-      to,
-      promote,
-    });
-    let res = await fetch(`/api/rooms/${state.roomCode}/move`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: payload,
-    });
-    if (res.status === 404) {
-      const synced = await ensureRoomSyncedOnServer();
-      if (synced) {
-        res = await fetch(`/api/rooms/${state.roomCode}/move`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: payload,
-        });
-      }
+  function setBusyState(isBusy, msg = "") {
+    state.busyAction = isBusy;
+    state.busyMessage = msg;
+    if (boardEl) {
+      boardEl.classList.toggle("is-busy", Boolean(isBusy));
     }
-    const data = await res.json();
-    if (res.ok && data.state) {
-      zenAudio.playWoodClick();
-      clearSelection();
-      state.game = data.state;
+    renderStatusAndHistory();
+    renderPlayerPanels();
+  }
+
+  async function triggerPendingAiMove() {
+    if (!state.roomCode || !state.game || state.game.winner) return;
+    const isEn = window.i18n && window.i18n.getLanguage() === "en";
+    const rivalName = (state.game.players.blanco && state.game.players.blanco.name) || "Sensei Bot";
+    setBusyState(
+      true,
+      isEn ? `${rivalName} is thinking its move...` : `${rivalName} está calculando su respuesta...`
+    );
+    try {
+      const res = await fetch(`/api/rooms/${state.roomCode}/ai-move`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          player_token: state.playerToken,
+          auth_token: state.authToken,
+          client_state: state.game,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.state) {
+        zenAudio.playWoodClick();
+        state.game = data.state;
+      }
+    } finally {
+      setBusyState(false, "");
+      renderGameAll();
+    }
+  }
+
+  async function submitMove(from, to, promote) {
+    if (state.busyAction) return;
+    const isEn = window.i18n && window.i18n.getLanguage() === "en";
+    setBusyState(true, isEn ? "Sending move..." : "Ejecutando tu jugada...");
+    try {
+      const payload = JSON.stringify({
+        player_token: state.playerToken,
+        auth_token: state.authToken,
+        from,
+        to,
+        promote,
+        defer_ai: true,
+        client_state: state.game,
+      });
+      const res = await fetch(`/api/rooms/${state.roomCode}/move`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      });
+      const data = await res.json();
+      if (res.ok && data.state) {
+        zenAudio.playWoodClick();
+        clearSelection();
+        state.game = data.state;
+        setBusyState(false, "");
+        renderGameAll();
+        if (data.ai_pending) {
+          await triggerPendingAiMove();
+        }
+        return;
+      }
+    } finally {
+      setBusyState(false, "");
       renderGameAll();
     }
   }
 
   async function submitDrop(pieceCode, row, col) {
-    const payload = JSON.stringify({
-      player_token: state.playerToken,
-      piece: pieceCode,
-      to: [row, col],
-    });
-    let res = await fetch(`/api/rooms/${state.roomCode}/drop`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: payload,
-    });
-    if (res.status === 404) {
-      const synced = await ensureRoomSyncedOnServer();
-      if (synced) {
-        res = await fetch(`/api/rooms/${state.roomCode}/drop`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: payload,
-        });
+    if (state.busyAction) return;
+    const isEn = window.i18n && window.i18n.getLanguage() === "en";
+    setBusyState(true, isEn ? "Dropping piece..." : "Reincorporando pieza en el tablero...");
+    try {
+      const payload = JSON.stringify({
+        player_token: state.playerToken,
+        auth_token: state.authToken,
+        piece: pieceCode,
+        to: [row, col],
+        defer_ai: true,
+        client_state: state.game,
+      });
+      const res = await fetch(`/api/rooms/${state.roomCode}/drop`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      });
+      const data = await res.json();
+      if (res.ok && data.state) {
+        zenAudio.playWoodClick();
+        clearSelection();
+        state.game = data.state;
+        setBusyState(false, "");
+        renderGameAll();
+        if (data.ai_pending) {
+          await triggerPendingAiMove();
+        }
+        return;
       }
-    }
-    const data = await res.json();
-    if (res.ok && data.state) {
-      zenAudio.playWoodClick();
-      clearSelection();
-      state.game = data.state;
+    } finally {
+      setBusyState(false, "");
       renderGameAll();
     }
   }
@@ -2150,7 +2225,7 @@
     }
   }
 
-  async function joinRoomByCode(code, name = "", existingToken = null, spectate = false) {
+  async function joinRoomByCode(code, name = "", existingToken = null, spectate = false, silentNotFound = false) {
     directJoinError.hidden = true;
     const cleanCode = (code || "").trim().toUpperCase();
     if (!cleanCode) {
@@ -2175,8 +2250,10 @@
       if (lobbyDialog.open) lobbyDialog.close();
       return true;
     } else {
-      directJoinError.textContent = data.error || "No se encontró la sala.";
-      directJoinError.hidden = false;
+      if (!silentNotFound) {
+        directJoinError.textContent = data.error || "No se encontró la sala.";
+        directJoinError.hidden = false;
+      }
       return false;
     }
   }
@@ -3217,7 +3294,7 @@
     const roomParam = params.get("room");
     if (roomParam) {
       const saved = loadSession(roomParam.toUpperCase());
-      const joined = await joinRoomByCode(roomParam, getNickname(), saved ? saved.token : null);
+      const joined = await joinRoomByCode(roomParam, getNickname(), saved ? saved.token : null, false, true);
       if (joined) return;
       directJoinError.hidden = true;
       const cleanUrl = new URL(window.location.href);
