@@ -1219,7 +1219,24 @@ def broadcast_lobby():
 
 @app.after_request
 def add_security_and_cache_headers(response):
-    if request.path == "/" or request.path.startswith("/static/"):
+    icon_paths = (
+        "/favicon.ico",
+        "/icon-48.png",
+        "/icon-192.png",
+        "/icon-512.png",
+        "/icon.svg",
+        "/apple-touch-icon.png",
+        "/apple-touch-icon-precomposed.png",
+        "/static/favicon.ico",
+        "/static/icon-48.png",
+        "/static/icon-192.png",
+        "/static/icon-512.png",
+        "/static/icon.svg",
+        "/static/apple-touch-icon.png",
+    )
+    if request.path in icon_paths:
+        response.headers["Cache-Control"] = "public, max-age=86400, stale-while-revalidate=604800"
+    elif request.path == "/" or request.path.startswith("/static/"):
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     # Cabeceras de seguridad contra XSS, Clickjacking y MIME Sniffing
     response.headers["X-Content-Type-Options"] = "nosniff"
